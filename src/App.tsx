@@ -572,6 +572,7 @@ export default function App() {
     }
     return "system";
   });
+  const [isPremium, setIsPremium] = useState(isTauri);
 
   const [localSearch, setLocalSearch] = useState("");
   const [remoteSearch, setRemoteSearch] = useState("");
@@ -1345,6 +1346,10 @@ export default function App() {
   };
 
   const openFtpBookmarkModal = () => {
+    if (!isPremium) {
+      addLog("info", "Premium required to save bookmarks.");
+      return;
+    }
     if (!host) {
       addLog("error", "Connect details are empty.");
       return;
@@ -1573,6 +1578,11 @@ export default function App() {
       }
 
       if (modal.type === "ftp-bookmark") {
+        if (!isPremium) {
+          addLog("info", "Premium required to save bookmarks.");
+          closeModal();
+          return;
+        }
         const name = modalValue.trim();
         if (!name) {
           addLog("error", "Bookmark name required.");
@@ -1681,6 +1691,10 @@ export default function App() {
   };
 
   const addLocalBookmarks = async (paths: string[]) => {
+    if (!isPremium) {
+      addLog("info", "Premium required to save bookmarks.");
+      return;
+    }
     const entryMap = new Map(localEntries.map((entry) => [entry.path, entry]));
     const next = [...localBookmarks];
     for (const path of paths) {
@@ -1703,6 +1717,10 @@ export default function App() {
 
   const handleBookmarksDrop = async (event: React.DragEvent) => {
     event.preventDefault();
+    if (!isPremium) {
+      addLog("info", "Premium required to save bookmarks.");
+      return;
+    }
     if (!isTauri) {
       return;
     }
@@ -1753,6 +1771,15 @@ export default function App() {
         window.clearTimeout(menuCloseRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    if (isTauri) {
+      setIsPremium(true);
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    setIsPremium(params.get("tier") === "premium");
   }, []);
 
   useEffect(() => {
@@ -2153,7 +2180,13 @@ export default function App() {
             <button onClick={handleDisconnect} disabled={!connected}>
               Disconnect
             </button>
-            <button onClick={openFtpBookmarkModal}>Save Bookmark</button>
+            <button
+              onClick={openFtpBookmarkModal}
+              disabled={!isPremium}
+              title={!isPremium ? "Premium required" : "Save bookmark"}
+            >
+              Save Bookmark
+            </button>
             <div className={`status-pill ${connected ? "online" : "offline"}`}>
               {connected ? "Connected" : "Disconnected"}
             </div>
@@ -2302,6 +2335,8 @@ export default function App() {
             <div className="side-title">Bookmarks</div>
             {!isTauri ? (
               <div className="side-muted">Bookmarks are available in the desktop app.</div>
+            ) : !isPremium ? (
+              <div className="side-muted">Premium required to save bookmarks.</div>
             ) : localBookmarks.length === 0 ? (
               <div className="side-muted">Drag local folders here.</div>
             ) : (
@@ -2475,12 +2510,17 @@ export default function App() {
                                   className={`pin-btn ${isPinned ? "pinned" : ""}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
+                                    if (!isPremium && !isPinned) {
+                                      addLog("info", "Premium required to save bookmarks.");
+                                      return;
+                                    }
                                     if (isPinned) {
                                       removeLocalBookmark(entry.path);
                                     } else {
                                       addLocalBookmarks([entry.path]).catch(() => null);
                                     }
                                   }}
+                                  disabled={!isPremium && !isPinned}
                                   title={isPinned ? "Unpin" : "Pin"}
                                 >
                                   <IconStar />
@@ -2601,12 +2641,17 @@ export default function App() {
                               className={`entry-pin ${isPinned ? "pinned" : ""}`}
                               onClick={(event) => {
                                 event.stopPropagation();
+                                if (!isPremium && !isPinned) {
+                                  addLog("info", "Premium required to save bookmarks.");
+                                  return;
+                                }
                                 if (isPinned) {
                                   removeLocalBookmark(entry.path);
                                 } else {
                                   addLocalBookmarks([entry.path]).catch(() => null);
                                 }
                               }}
+                              disabled={!isPremium && !isPinned}
                               title={isPinned ? "Unpin" : "Pin"}
                             >
                               <IconStar />
