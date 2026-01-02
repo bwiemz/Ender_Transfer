@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.idea
+.vscode
+src-tauri/target
+src-tauri/.cargo
+src-tauri/.rustc_info.json
+src-tauri/.tauri
+src-tauri/**/*.rlib
+src-tauri/**/*.pdb
+src-tauri/**/*.d
+src-tauri/**/*.exe
