@@ -786,8 +786,8 @@ export default function App() {
     ]);
   };
 
-  const refreshRemote = async (path?: string) => {
-    if (!connected) return;
+  const refreshRemote = async (path?: string, force?: boolean) => {
+    if (!connected && !force) return;
     try {
       const response = isTauri
         ? await invoke<ListResponse>("list_dir", { path: path ?? null })
@@ -1431,7 +1431,8 @@ export default function App() {
           });
       setConnected(true);
       setRemotePath(response.cwd || "/");
-      await refreshRemote(response.cwd || "/");
+      addLog("success", "Connected.");
+      await refreshRemote(response.cwd || "/", true);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       addLog("error", message);
@@ -2350,22 +2351,28 @@ export default function App() {
             </label>
             <label>
               Protocol
-              <select
+              <Dropdown
                 value={protocol}
-                onChange={(event) => {
-                  const value = event.target.value as "ftp" | "sftp";
-                  if (isTauri && value === "sftp") {
+                onChange={(value) => {
+                  const next = value as "ftp" | "sftp";
+                  if (isTauri && next === "sftp") {
                     addLog("error", "SFTP is available in the web app only.");
                     return;
                   }
-                  setProtocol(value);
+                  setProtocol(next);
                 }}
-              >
-                <option value="ftp">FTP</option>
-                <option value="sftp" disabled={isTauri}>
-                  SFTP (web)
-                </option>
-              </select>
+                sections={[
+                  {
+                    options: [
+                      { value: "ftp", label: "FTP" },
+                      {
+                        value: "sftp",
+                        label: isTauri ? "SFTP (web only)" : "SFTP",
+                      },
+                    ],
+                  },
+                ]}
+              />
             </label>
             {protocol === "sftp" && !isTauri ? (
               <label>
@@ -2781,7 +2788,7 @@ export default function App() {
                           >
                             <span className="name-cell">
                               <span className={`entry-dot ${entry.is_dir ? "dir" : "file"}`} />
-                              {entry.name}
+                              <span className="name-text">{entry.name}</span>
                             </span>
                             <span>{entry.is_dir ? "-" : formatBytes(entry.size ?? null)}</span>
                             <span>{formatDate(entry.modified ?? null)}</span>
@@ -3205,7 +3212,7 @@ export default function App() {
                           >
                             <span className="name-cell">
                               <span className={`entry-dot ${entry.is_dir ? "dir" : "file"}`} />
-                              {entry.name}
+                              <span className="name-text">{entry.name}</span>
                             </span>
                             <span>{entry.is_dir ? "-" : formatBytes(entry.size ?? null)}</span>
                             <span>{formatDate(entry.modified ?? null)}</span>

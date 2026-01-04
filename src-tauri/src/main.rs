@@ -1,10 +1,11 @@
 ﻿use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use suppaftp::types::FileType;
+use suppaftp::types::{FileType, Mode};
 use suppaftp::{FtpError, FtpStream};
 use tauri::{Manager, State, Window};
 #[cfg(feature = "system-tray")]
@@ -369,18 +370,51 @@ fn parse_list_entries(lines: Vec<String>) -> Vec<FtpEntry> {
     .collect()
 }
 
+fn connect_with_timeout(host: &str, port: u16, timeout: Duration) -> Result<FtpStream, String> {
+  let addrs: Vec<SocketAddr> = (host, port)
+    .to_socket_addrs()
+    .map_err(map_err)?
+    .collect();
+  if addrs.is_empty() {
+    return Err(format!("Unable to resolve address: {}:{}", host, port));
+  }
+
+  let mut last_err: Option<String> = None;
+  let mut ordered = addrs;
+  ordered.sort_by_key(|addr| if addr.is_ipv4() { 0 } else { 1 });
+
+  for addr in ordered {
+    match TcpStream::connect_timeout(&addr, timeout) {
+      Ok(stream) => {
+        stream
+          .set_read_timeout(Some(timeout))
+          .map_err(map_err)?;
+        stream
+          .set_write_timeout(Some(timeout))
+          .map_err(map_err)?;
+        return FtpStream::connect_with_stream(stream).map_err(map_err);
+      }
+      Err(err) => last_err = Some(map_err(err)),
+    }
+  }
+
+  Err(last_err.unwrap_or_else(|| "Failed to connect".to_string()))
+}
+
 #[tauri::command]
 fn connect(
   state: State<'_, AppState>,
   window: Window,
   config: ConnectConfig,
 ) -> Result<ConnectResponse, String> {
-  let address = format!("{}:{}", config.host.trim(), config.port);
+  let host = config.host.trim();
+  let address = format!("{}:{}", host, config.port);
   log_event(&window, "info", format!("Connecting to {}", address));
-  let mut ftp = FtpStream::connect(address).map_err(map_err)?;
+  let mut ftp = connect_with_timeout(host, config.port, Duration::from_secs(10))?;
   ftp
     .login(&config.username, &config.password)
     .map_err(map_err)?;
+  ftp.set_passive_nat_workaround(true);
   ftp.transfer_type(FileType::Binary).map_err(map_err)?;
   let cwd = normalize_cwd(ftp.pwd().map_err(map_err)?);
   *state.cwd.lock().map_err(map_err)? = cwd.clone();
@@ -582,12 +616,43 @@ fn upload_file(
   let mut ftp_guard = state.ftp.lock().map_err(map_err)?;
   let ftp = ftp_guard.as_mut().ok_or("Not connected")?;
 
-  let file = File::open(&local_path).map_err(map_err)?;
-  let total = file.metadata().map(|m| m.len()).ok();
-  let reader = ProgressReader::new(file, window.clone(), id.clone(), total);
-  let mut reader = reader;
+  let should_retry_with_epsv = |err: &FtpError| match err {
+    FtpError::ConnectionError(io_err) => {
+      io_err.kind() == std::io::ErrorKind::TimedOut
+        || io_err.raw_os_error() == Some(10060)
+    }
+    FtpError::UnexpectedResponse(response) => response.status.code() == 425,
+    _ => false,
+  };
 
-  match ftp.put_file(remote_path, &mut reader) {
+  let mut attempt_upload = |mode: Mode| -> Result<(), FtpError> {
+    ftp.set_mode(mode);
+    let file = File::open(&local_path).map_err(FtpError::ConnectionError)?;
+    let total = file.metadata().map(|m| m.len()).ok();
+    let reader = ProgressReader::new(file, window.clone(), id.clone(), total);
+    let mut reader = reader;
+    ftp.put_file(remote_path.clone(), &mut reader).map(|_| ())
+  };
+
+  let result = match attempt_upload(Mode::Passive) {
+    Ok(_) => Ok(()),
+    Err(err) => {
+      if should_retry_with_epsv(&err) {
+        log_event(
+          &window,
+          "info",
+          "Upload retry using EPSV (extended passive)".to_string(),
+        );
+        attempt_upload(Mode::ExtendedPassive)
+      } else {
+        Err(err)
+      }
+    }
+  };
+
+  ftp.set_mode(Mode::Passive);
+
+  match result {
     Ok(_) => {
       emit_done(&window, &id);
       log_event(&window, "success", format!("Uploaded {}", local_path));

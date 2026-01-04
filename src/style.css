@@ -22,7 +22,7 @@
   --shadow: 0 24px 60px rgba(23, 28, 33, 0.08);
   --radius: 18px;
   --row-odd: rgba(255, 255, 255, 0.9);
-  --scrollbar-track: rgba(24, 32, 40, 0.16);
+  --scrollbar-track: rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme="dark"] {
@@ -41,7 +41,7 @@
   --danger: #e06c6c;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   --row-odd: rgba(24, 30, 36, 0.95);
-  --scrollbar-track: rgba(255, 255, 255, 0.12);
+  --scrollbar-track: rgba(24, 32, 40, 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,7 +61,7 @@
     --danger: #e06c6c;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
     --row-odd: rgba(24, 30, 36, 0.95);
-    --scrollbar-track: rgba(255, 255, 255, 0.12);
+    --scrollbar-track: rgba(24, 32, 40, 0.16);
   }
 }
 
@@ -164,6 +164,13 @@ button.primary.ghost {
   border: 1px solid rgba(31, 122, 140, 0.2);
 }
 
+:root[data-theme="dark"] button.primary.ghost,
+:root[data-theme="system"] button.primary.ghost {
+  background: rgba(24, 30, 36, 0.92);
+  color: var(--text);
+  border-color: var(--line);
+}
+
 button.ghost {
   background: transparent;
   border: 1px solid rgba(24, 32, 40, 0.18);
@@ -191,7 +198,8 @@ select {
 
 .preferences-card select,
 .modal-form select,
-.side-field select {
+.side-field select,
+.dropdown-select {
   appearance: none;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(24, 32, 40, 0.18);
@@ -208,9 +216,11 @@ select {
 :root[data-theme="dark"] .preferences-card select,
 :root[data-theme="dark"] .modal-form select,
 :root[data-theme="dark"] .side-field select,
+:root[data-theme="dark"] .dropdown-select,
 :root[data-theme="system"] .preferences-card select,
 :root[data-theme="system"] .modal-form select,
-:root[data-theme="system"] .side-field select {
+:root[data-theme="system"] .side-field select,
+:root[data-theme="system"] .dropdown-select {
   background-image: linear-gradient(45deg, transparent 50%, rgba(231, 237, 242, 0.6) 50%),
     linear-gradient(135deg, rgba(231, 237, 242, 0.6) 50%, transparent 50%);
 }
@@ -366,9 +376,9 @@ button:focus-visible {
   top: calc(100% + 6px);
   left: 0;
   min-width: 160px;
-  background: #fff;
+  background: var(--card);
   border-radius: 12px;
-  border: 1px solid rgba(24, 32, 40, 0.12);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
   padding: 6px;
   z-index: 30;
@@ -385,20 +395,27 @@ button:focus-visible {
 
 .menu-divider {
   height: 1px;
-  background: rgba(24, 32, 40, 0.12);
+  background: var(--line);
   margin: 6px 4px;
 }
 
 .menu-item {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
   padding: 8px 10px;
   border-radius: 10px;
-  background: transparent;
+  background: var(--bg-soft);
   box-shadow: none;
-  border: 1px solid transparent;
   font-weight: 600;
   font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.menu-item:last-child {
+  margin-bottom: 0;
 }
 
 .menu-item:hover {
@@ -441,9 +458,9 @@ button:focus-visible {
   top: 0;
   left: calc(100% + 6px);
   min-width: 180px;
-  background: #fff;
+  background: var(--card);
   border-radius: 12px;
-  border: 1px solid rgba(24, 32, 40, 0.12);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
   padding: 6px;
   display: none;
@@ -600,8 +617,8 @@ button:focus-visible {
   justify-content: space-between;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(24, 32, 40, 0.18);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  background: var(--card);
   box-shadow: none;
 }
 
@@ -644,9 +661,9 @@ button:focus-visible {
   left: 0;
   right: 0;
   top: calc(100% + 6px);
-  background: #fff;
+  background: var(--card);
   border-radius: 12px;
-  border: 1px solid rgba(24, 32, 40, 0.12);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow);
   max-height: 240px;
   overflow: auto;
@@ -664,6 +681,11 @@ button:focus-visible {
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
+  margin-bottom: 6px;
+}
+
+.bookmark-item:last-child {
+  margin-bottom: 0;
 }
 
 .bookmark-item:hover {
@@ -838,6 +860,10 @@ button:focus-visible {
 .details-name {
   font-weight: 700;
   font-size: 1rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .details-scope {
@@ -851,8 +877,21 @@ button:focus-visible {
   gap: 10px;
 }
 
+.details-row span {
+  min-width: 0;
+}
+
+.details-row span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .details-path {
-  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
 }
 
@@ -1204,17 +1243,21 @@ button:focus-visible {
 
 .table-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.4fr auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr) auto;
   align-items: center;
   gap: 12px;
   text-align: left;
   background: rgba(255, 255, 255, 0.75);
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid lightgray;
+  border: 1px solid var(--line);
   box-shadow: none;
   transition: border 0.2s ease, transform 0.2s ease;
   cursor: pointer;
+}
+
+.table-row > span {
+  min-width: 0;
 }
 
 .table-row:hover {
@@ -1241,6 +1284,11 @@ button:focus-visible {
   backdrop-filter: blur(10px);
 }
 
+:root[data-theme="dark"] .table-head,
+:root[data-theme="system"] .table-head {
+  background: linear-gradient(90deg, rgba(24, 30, 36, 0.95), rgba(18, 24, 30, 0.9));
+}
+
 .table-head:hover {
   border-color: transparent;
 }
@@ -1253,6 +1301,14 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry-dot {
@@ -1281,9 +1337,9 @@ button:focus-visible {
 .row-actions button {
   padding: 6px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card);
   box-shadow: none;
-  border: 1px solid rgba(24, 32, 40, 0.12);
+  border: 1px solid var(--line);
   color: var(--muted);
   display: inline-flex;
   align-items: center;
@@ -1401,8 +1457,8 @@ button:focus-visible {
   gap: 12px;
   padding: 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(24, 32, 40, 0.1);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
   flex-direction: column;
 }
 
@@ -1413,11 +1469,17 @@ button:focus-visible {
 
 .queue-title {
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .queue-sub {
   font-size: 0.85rem;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .queue-meta {
@@ -1469,9 +1531,9 @@ button:focus-visible {
 
 .empty-state {
   padding: 20px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--bg-soft);
   border-radius: 16px;
-  border: 1px dashed rgba(24, 32, 40, 0.15);
+  border: 1px dashed var(--line);
   color: var(--muted);
   text-align: center;
 }
