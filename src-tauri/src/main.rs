@@ -1,6 +1,6 @@
 ﻿use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::{Cursor, Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::Path;
 use std::sync::Mutex;
@@ -486,6 +486,77 @@ fn create_dir(state: State<'_, AppState>, window: Window, path: String) -> Resul
 }
 
 #[tauri::command]
+fn create_remote_file(state: State<'_, AppState>, window: Window, path: String) -> Result<(), String> {
+  let mut ftp_guard = state.ftp.lock().map_err(map_err)?;
+  let ftp = ftp_guard.as_mut().ok_or("Not connected")?;
+  let mut reader = Cursor::new(Vec::<u8>::new());
+  ftp.put_file(path, &mut reader).map_err(map_err)?;
+  log_event(&window, "success", "Remote file created");
+  Ok(())
+}
+
+fn join_remote(base: &str, name: &str) -> String {
+  if base.ends_with('/') {
+    format!("{}{}", base, name)
+  } else {
+    format!("{}/{}", base, name)
+  }
+}
+
+fn copy_remote_file(ftp: &mut FtpStream, from: &str, to: &str) -> Result<(), String> {
+  let mut data: Vec<u8> = Vec::new();
+  ftp
+    .retr(from, |reader| {
+      reader
+        .read_to_end(&mut data)
+        .map(|_| ())
+        .map_err(FtpError::ConnectionError)
+    })
+    .map_err(map_err)?;
+  let mut cursor = Cursor::new(data);
+  ftp.put_file(to.to_string(), &mut cursor).map_err(map_err)?;
+  Ok(())
+}
+
+fn copy_remote_dir(ftp: &mut FtpStream, from: &str, to: &str) -> Result<(), String> {
+  let _ = ftp.mkdir(to);
+  let listing = ftp.list(Some(from)).map_err(map_err)?;
+  let entries = parse_list_entries(listing);
+  for entry in entries {
+    if entry.name == "." || entry.name == ".." {
+      continue;
+    }
+    let from_path = join_remote(from, &entry.name);
+    let to_path = join_remote(to, &entry.name);
+    if entry.is_dir {
+      copy_remote_dir(ftp, &from_path, &to_path)?;
+    } else {
+      copy_remote_file(ftp, &from_path, &to_path)?;
+    }
+  }
+  Ok(())
+}
+
+#[tauri::command]
+fn copy_remote(
+  state: State<'_, AppState>,
+  window: Window,
+  from: String,
+  to: String,
+  is_dir: bool,
+) -> Result<(), String> {
+  let mut ftp_guard = state.ftp.lock().map_err(map_err)?;
+  let ftp = ftp_guard.as_mut().ok_or("Not connected")?;
+  if is_dir {
+    copy_remote_dir(ftp, &from, &to)?;
+  } else {
+    copy_remote_file(ftp, &from, &to)?;
+  }
+  log_event(&window, "success", "Remote copy completed");
+  Ok(())
+}
+
+#[tauri::command]
 fn delete_path(
   state: State<'_, AppState>,
   window: Window,
@@ -825,6 +896,45 @@ fn create_local_dir(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn create_local_file(path: String) -> Result<(), String> {
+  if let Some(parent) = Path::new(&path).parent() {
+    fs::create_dir_all(parent).map_err(map_err)?;
+  }
+  File::create(path).map_err(map_err)?;
+  Ok(())
+}
+
+fn copy_dir_all(from: &Path, to: &Path) -> Result<(), String> {
+  fs::create_dir_all(to).map_err(map_err)?;
+  for entry in fs::read_dir(from).map_err(map_err)? {
+    let entry = entry.map_err(map_err)?;
+    let path = entry.path();
+    let target = to.join(entry.file_name());
+    if path.is_dir() {
+      copy_dir_all(&path, &target)?;
+    } else {
+      fs::copy(&path, &target).map_err(map_err)?;
+    }
+  }
+  Ok(())
+}
+
+#[tauri::command]
+fn copy_local(from: String, to: String) -> Result<(), String> {
+  let from_path = Path::new(&from);
+  let to_path = Path::new(&to);
+  if from_path.is_dir() {
+    copy_dir_all(from_path, to_path)?;
+  } else {
+    if let Some(parent) = to_path.parent() {
+      fs::create_dir_all(parent).map_err(map_err)?;
+    }
+    fs::copy(from_path, to_path).map_err(map_err)?;
+  }
+  Ok(())
+}
+
+#[tauri::command]
 fn delete_local(path: String, is_dir: bool) -> Result<(), String> {
   if is_dir {
     fs::remove_dir_all(path).map_err(map_err)?;
@@ -855,6 +965,57 @@ fn launch_path(path: String) -> Result<(), String> {
     .spawn()
     .map_err(map_err)?;
   Ok(())
+}
+
+#[tauri::command]
+fn open_with_dialog(path: String) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("rundll32.exe")
+      .args(["shell32.dll,OpenAs_RunDLL", &path])
+      .spawn()
+      .map_err(map_err)?;
+    Ok(())
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = path;
+    Err("Open with dialog is only supported on Windows.".to_string())
+  }
+}
+
+#[tauri::command]
+fn open_properties(path: String) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    if !Path::new(&path).exists() {
+      return Err("File not found.".to_string());
+    }
+    let parent = Path::new(&path)
+      .parent()
+      .and_then(|value| value.to_str())
+      .unwrap_or("")
+      .replace("'", "''");
+    let name = Path::new(&path)
+      .file_name()
+      .and_then(|value| value.to_str())
+      .unwrap_or("")
+      .replace("'", "''");
+    let command = format!(
+      "$shell = New-Object -ComObject Shell.Application; $folder = $shell.Namespace('{}'); $item = $folder.ParseName('{}'); $item.InvokeVerb('Properties');",
+      parent, name
+    );
+    std::process::Command::new("powershell")
+      .args(["-NoProfile", "-Command", &command])
+      .spawn()
+      .map_err(map_err)?;
+    Ok(())
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = path;
+    Err("Properties dialog is only supported on Windows.".to_string())
+  }
 }
 
 #[tauri::command]
@@ -1158,16 +1319,22 @@ fn main() {
       upload_file,
       list_local,
       create_local_dir,
+      create_local_file,
+      copy_local,
       delete_local,
       rename_local,
       path_exists,
       launch_path,
+      open_with_dialog,
+      open_properties,
       get_env,
       is_local_dir,
       read_local_image_data,
       read_local_image_thumb,
       read_local_video_data,
       read_local_video_thumb,
+      copy_remote,
+      create_remote_file,
       update_preferences
     ])
     .run(tauri::generate_context!())

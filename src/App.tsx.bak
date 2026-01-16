@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/api/dialog";
@@ -18,45 +11,8 @@ import {
   writeSharedPreferences,
   type LaunchToken,
 } from "@enderfall/runtime";
-import { AccessGate, Button, Dropdown, Input, MainHeader, Modal, Panel, PreferencesModal, SideMenu, SideMenuSubmenu, Toggle, applyTheme, getStoredTheme } from "@enderfall/ui";
-import {
-  FiChevronRight,
-  FiCornerUpLeft,
-  FiCornerUpRight,
-  FiArrowDown,
-  FiArrowUp,
-  FiBox,
-  FiCalendar,
-  FiPlusCircle,
-  FiCamera,
-  FiCopy,
-  FiDownload,
-  FiEdit2,
-  FiEye,
-  FiFilm,
-  FiFile,
-  FiFileText,
-  FiFolder,
-  FiFolderPlus,
-  FiHardDrive,
-  FiHome,
-  FiImage,
-  FiInfo,
-  FiMaximize2,
-  FiMonitor,
-  FiMusic,
-  FiPlus,
-  FiScissors,
-  FiTag,
-  FiType,
-} from "react-icons/fi";
-import {
-  BiColumns,
-  BiGridAlt,
-  BiGridSmall,
-  BiListUl,
-  BiTable,
-} from "react-icons/bi";
+import { AccessGate, Button, Dropdown, Input, MainHeader, Panel, PreferencesModal, Toggle, applyTheme, getStoredTheme } from "@enderfall/ui";
+import { FiDownload, FiFilm, FiFileText, FiFolder, FiFolderPlus, FiHardDrive, FiHome, FiImage, FiMonitor, FiMusic } from "react-icons/fi";
 const IconLock = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -109,127 +65,6 @@ const getPlaceIcon = (label: string) => {
   return <FiFolder />;
 };
 
-const withViewIcon = (icon: JSX.Element, size = 16) => (
-  <span className="view-icon" style={{ ["--view-icon-size" as any]: `${size}px` }}>
-    {icon}
-  </span>
-);
-
-const getViewModeIcon = (mode: ViewMode) => {
-  switch (mode) {
-    case "details":
-      return withViewIcon(<BiTable />);
-    case "list":
-      return withViewIcon(<BiListUl />);
-    case "tiles":
-      return withViewIcon(<BiGridAlt />);
-    case "content":
-      return withViewIcon(<BiColumns />);
-    case "small-icons":
-      return withViewIcon(<BiGridSmall />, 12);
-    case "medium-icons":
-      return withViewIcon(<BiGridSmall />, 18);
-    case "large-icons":
-      return withViewIcon(<BiGridSmall />, 26);
-    case "extra-large-icons":
-      return withViewIcon(<BiGridSmall />, 34);
-    default:
-      return withViewIcon(<BiTable />);
-  }
-};
-
-const getSortByIcon = (value: SortBy) => {
-  switch (value) {
-    case "name":
-      return <FiType />;
-    case "date":
-      return <FiCalendar />;
-    case "type":
-      return <FiFile />;
-    case "size":
-      return <FiBox />;
-    case "tags":
-      return <FiTag />;
-    case "date-created":
-      return <FiPlusCircle />;
-    case "date-modified":
-      return <FiEdit2 />;
-    case "date-taken":
-      return <FiCamera />;
-    case "dimensions":
-      return <FiMaximize2 />;
-    case "rating":
-      return <IconStar />;
-    default:
-      return <FiType />;
-  }
-};
-
-const getSortOrderIcon = (value: SortOrder) => {
-  if (value === "desc") return <FiArrowDown />;
-  return <FiArrowUp />;
-};
-
-const getEntryTypeIcon = ({
-  isDir,
-  isImage,
-  isVideo,
-}: {
-  isDir: boolean;
-  isImage: boolean;
-  isVideo: boolean;
-}) => {
-  if (isDir) return <FiFolder />;
-  if (isImage) return <FiImage />;
-  if (isVideo) return <FiFilm />;
-  return <FiFileText />;
-};
-
-type ContextMenuEntry = {
-  scope: "local" | "remote";
-  name: string;
-  path: string;
-  isDir: boolean;
-  isImage: boolean;
-  isVideo: boolean;
-};
-
-type ContextMenuState =
-  | { kind: "entry"; x: number; y: number; entry: ContextMenuEntry }
-  | { kind: "pane"; x: number; y: number; scope: "local" | "remote" };
-
-type RenameState = {
-  scope: "local" | "remote";
-  path: string;
-  name: string;
-  isDir: boolean;
-  value: string;
-};
-
-type ClipboardState = {
-  mode: "cut" | "copy";
-  scope: "local" | "remote";
-  entries: {
-    name: string;
-    path: string;
-    isDir: boolean;
-  }[];
-};
-
-type PreviewState = {
-  name: string;
-  path: string;
-  isVideo: boolean;
-  isImage: boolean;
-  scope: "local" | "remote";
-};
-
-type HistoryAction = {
-  label: string;
-  undo: () => Promise<void>;
-  redo: () => Promise<void>;
-};
-
 const IconEdit = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -255,133 +90,6 @@ const IconChevronDown = () => (
     />
   </svg>
 );
-
-const PaneSortMenu = ({
-  sortBy,
-  sortOrder,
-  onSortBy,
-  onSortOrder,
-}: {
-  sortBy: SortBy;
-  sortOrder: SortOrder;
-  onSortBy: (value: SortBy) => void;
-  onSortOrder: (value: SortOrder) => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handlePointer = (event: PointerEvent) => {
-      if (!ref.current) return;
-      if (ref.current.contains(event.target as Node)) return;
-      setOpen(false);
-    };
-    window.addEventListener("pointerdown", handlePointer);
-    return () => window.removeEventListener("pointerdown", handlePointer);
-  }, [open]);
-
-  return (
-    <div className={`bookmark-dropdown pane-sort-dropdown ${open ? "open" : ""}`} ref={ref}>
-      <button className="bookmark-trigger" type="button" onClick={() => setOpen((prev) => !prev)}>
-        <span className="bookmark-icon sort-icon"><FiArrowDown /></span>
-        <span className="bookmark-text">Sort</span>
-        <span className="bookmark-caret">
-          <IconChevronDown />
-        </span>
-      </button>
-      <div className="bookmark-menu">
-        <SideMenu resetKey={open}>
-          {sortPrimaryOptions.map((item) => (
-            <button
-              key={item.value}
-              className={`bookmark-item ${sortBy === item.value ? "active" : ""}`}
-              type="button"
-              onClick={() => {
-                onSortBy(item.value);
-                setOpen(false);
-              }}
-            >
-              <span className="bookmark-icon sort-icon">{getSortByIcon(item.value)}</span>
-              <span className="bookmark-text">{item.label}</span>
-            </button>
-          ))}
-          <div className="context-menu-separator" role="separator" />
-        <SideMenuSubmenu
-          id="pane-sort-more"
-          className="bookmark-submenu"
-          panelClassName="bookmark-submenu-panel"
-          enableViewportFlip
-          trigger={(triggerProps) => (
-            <button
-              className="bookmark-item is-submenu"
-              type="button"
-              onClick={triggerProps.onClick}
-              aria-expanded={triggerProps["aria-expanded"]}
-              disabled={triggerProps.disabled}
-            >
-              <span className="bookmark-text">More</span>
-              <span className="bookmark-caret">
-                <FiChevronRight />
-              </span>
-            </button>
-          )}
-        >
-            {sortMoreOptions.map((item) => (
-              <button
-                key={item.value}
-                className={`bookmark-item ${sortBy === item.value ? "active" : ""}`}
-                type="button"
-                onClick={() => {
-                  onSortBy(item.value);
-                  setOpen(false);
-                }}
-              >
-                <span className="bookmark-icon sort-icon">{getSortByIcon(item.value)}</span>
-                <span className="bookmark-text">{item.label}</span>
-              </button>
-            ))}
-          </SideMenuSubmenu>
-        <SideMenuSubmenu
-          id="pane-sort-order"
-          className="bookmark-submenu"
-          panelClassName="bookmark-submenu-panel"
-          enableViewportFlip
-          trigger={(triggerProps) => (
-            <button
-              className="bookmark-item is-submenu"
-              type="button"
-              onClick={triggerProps.onClick}
-              aria-expanded={triggerProps["aria-expanded"]}
-              disabled={triggerProps.disabled}
-            >
-              <span className="bookmark-text">Order</span>
-              <span className="bookmark-caret">
-                <FiChevronRight />
-              </span>
-            </button>
-          )}
-        >
-            {sortOrderOptions.map((item) => (
-              <button
-                key={item.value}
-                className={`bookmark-item ${sortOrder === item.value ? "active" : ""}`}
-                type="button"
-                onClick={() => {
-                  onSortOrder(item.value);
-                  setOpen(false);
-                }}
-              >
-                <span className="bookmark-icon sort-icon">{getSortOrderIcon(item.value)}</span>
-                <span className="bookmark-text">{item.label}</span>
-              </button>
-            ))}
-          </SideMenuSubmenu>
-        </SideMenu>
-      </div>
-    </div>
-  );
-};
 
 import {
   desktopDir,
@@ -465,6 +173,8 @@ type TransferItem = {
 };
 
 type ModalState =
+  | { type: "mkdir"; scope: "local" | "remote" }
+  | { type: "rename"; scope: "local" | "remote"; targetName: string; targetPath: string }
   | { type: "delete"; scope: "local" | "remote"; targetName: string; targetPath: string; isDir: boolean }
   | { type: "ftp-bookmark" }
   | { type: "prefs" };
@@ -496,6 +206,8 @@ type ViewMode =
   | "medium-icons"
   | "large-icons"
   | "extra-large-icons";
+
+type DetailsPanePosition = "right" | "bottom";
 
 type SortBy =
   | "name"
@@ -540,11 +252,6 @@ const sortMoreOptions: { value: SortBy; label: string }[] = [
   { value: "date-taken", label: "Date taken" },
   { value: "dimensions", label: "Dimensions" },
   { value: "rating", label: "Ratings" },
-];
-
-const sortOrderOptions: { value: SortOrder; label: string }[] = [
-  { value: "asc", label: "Ascending" },
-  { value: "desc", label: "Descending" },
 ];
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
@@ -593,19 +300,6 @@ const openLink = (url: string) => {
   } else {
     window.open(url, "_blank", "noopener,noreferrer");
   }
-};
-
-const handleEllipsisTooltip = (event: ReactMouseEvent<HTMLElement>) => {
-  const target = event.currentTarget;
-  if (target.scrollWidth > target.clientWidth) {
-    target.setAttribute("title", target.textContent ?? "");
-  } else {
-    target.removeAttribute("title");
-  }
-};
-
-const clearEllipsisTooltip = (event: ReactMouseEvent<HTMLElement>) => {
-  event.currentTarget.removeAttribute("title");
 };
 
 const formatBytes = (value?: number | null) => {
@@ -801,10 +495,6 @@ const toLocalFileId = (file: File) =>
   `${file.name}-${file.size}-${file.lastModified}`;
 
 export default function App() {
-  const shellRef = useRef<HTMLElement | null>(null);
-  const workspaceRef = useRef<HTMLElement | null>(null);
-  const sidebarRef = useRef<HTMLDivElement | null>(null);
-  const detailsRef = useRef<HTMLDivElement | null>(null);
   const [host, setHost] = useState("");
   const [port, setPort] = useState(21);
   const [protocol, setProtocol] = useState<"ftp" | "sftp">("ftp");
@@ -889,27 +579,6 @@ export default function App() {
     const stored = localStorage.getItem("downloadLimitKbps");
     return stored ? Number(stored) : 0;
   });
-
-  useEffect(() => {
-    const shell = shellRef.current;
-    const workspace = workspaceRef.current;
-    const storedSidebar = localStorage.getItem("ftpSidebarWidth");
-    const storedDetails = localStorage.getItem("ftpDetailsWidth");
-    const storedMainHeight = localStorage.getItem("ftpMainHeight");
-    const storedDefaultHeight = localStorage.getItem("ftpMainHeightDefault");
-    if (shell && !storedDefaultHeight) {
-      localStorage.setItem("ftpMainHeightDefault", String(shell.getBoundingClientRect().height));
-    }
-    if (shell && storedSidebar) {
-      shell.style.setProperty("--sidebar-width", `${Number(storedSidebar)}px`);
-    }
-    if (workspace && storedDetails) {
-      workspace.style.setProperty("--details-width", `${Number(storedDetails)}px`);
-    }
-    if (shell && storedMainHeight) {
-      shell.style.setProperty("--main-height", `${Number(storedMainHeight)}px`);
-    }
-  }, []);
 
   useEffect(() => {
     if (!isTauri) return;
@@ -1082,95 +751,6 @@ export default function App() {
     setConnectionDetailOpen(!connected);
   }, [connected]);
 
-  const startResize =
-    (target: "sidebar" | "details") => (event: ReactPointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-    const startX = event.clientX;
-    const shell = shellRef.current;
-    const workspace = workspaceRef.current;
-    const sidebar = sidebarRef.current;
-    const details = detailsRef.current;
-    const startWidth =
-      target === "sidebar"
-        ? sidebar?.getBoundingClientRect().width ?? 240
-        : details?.getBoundingClientRect().width ?? 260;
-    const containerWidth =
-      target === "sidebar"
-        ? shell?.getBoundingClientRect().width ?? window.innerWidth
-        : workspace?.getBoundingClientRect().width ?? window.innerWidth;
-    const minWidth = target === "sidebar" ? 200 : 220;
-    const maxWidth = Math.max(minWidth, Math.min(520, containerWidth - 320));
-
-    const handleMove = (moveEvent: PointerEvent) => {
-      const delta = moveEvent.clientX - startX;
-      const nextRaw = target === "details" ? startWidth - delta : startWidth + delta;
-      const next = Math.min(maxWidth, Math.max(minWidth, nextRaw));
-      if (target === "sidebar" && shell) {
-        shell.style.setProperty("--sidebar-width", `${next}px`);
-      }
-      if (target === "details" && workspace) {
-        workspace.style.setProperty("--details-width", `${next}px`);
-      }
-    };
-
-    const handleUp = () => {
-      const value =
-        target === "sidebar"
-          ? shell?.style.getPropertyValue("--sidebar-width")
-          : workspace?.style.getPropertyValue("--details-width");
-      if (value) {
-        const parsed = Number(value.replace("px", ""));
-        if (!Number.isNaN(parsed)) {
-          localStorage.setItem(
-            target === "sidebar" ? "ftpSidebarWidth" : "ftpDetailsWidth",
-            String(parsed)
-          );
-        }
-      }
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      document.body.style.cursor = "";
-    };
-
-    document.body.style.cursor = "col-resize";
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-  };
-
-  const startResizeVertical = (event: ReactPointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const shell = shellRef.current;
-    if (!shell) return;
-    const startY = event.clientY;
-    const startHeight = shell.getBoundingClientRect().height;
-    const storedDefault = localStorage.getItem("ftpMainHeightDefault");
-    const minHeight = storedDefault ? Number(storedDefault) : startHeight;
-    const maxHeight = Math.max(minHeight, window.innerHeight - 220);
-
-    const handleMove = (moveEvent: PointerEvent) => {
-      const delta = moveEvent.clientY - startY;
-      const next = Math.min(maxHeight, Math.max(minHeight, startHeight + delta));
-      shell.style.setProperty("--main-height", `${next}px`);
-    };
-
-    const handleUp = () => {
-      const value = shell.style.getPropertyValue("--main-height");
-      if (value) {
-        const parsed = Number(value.replace("px", ""));
-        if (!Number.isNaN(parsed)) {
-          localStorage.setItem("ftpMainHeight", String(parsed));
-        }
-      }
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      document.body.style.cursor = "";
-    };
-
-    document.body.style.cursor = "row-resize";
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", handleUp);
-  };
-
   const handleOpenAppBrowser = async () => {
     console.log("[Ender Transfer] open Enderfall Hub");
     await openAppBrowser(appId);
@@ -1187,166 +767,34 @@ export default function App() {
 
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [activePane, setActivePane] = useState<"local" | "remote">("local");
-  const [localViewMode, setLocalViewMode] = useState<ViewMode>(() => {
-    const stored = localStorage.getItem("viewModeLocal") ?? localStorage.getItem("viewMode");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const stored = localStorage.getItem("viewMode");
     if (stored && viewModeOptions.some((item) => item.value === stored)) {
       return stored as ViewMode;
     }
     return "details";
   });
-  const [remoteViewMode, setRemoteViewMode] = useState<ViewMode>(() => {
-    const stored = localStorage.getItem("viewModeRemote") ?? localStorage.getItem("viewMode");
-    if (stored && viewModeOptions.some((item) => item.value === stored)) {
-      return stored as ViewMode;
-    }
-    return "details";
+  const [detailsPanePosition, setDetailsPanePosition] = useState<DetailsPanePosition>(() => {
+    const stored = localStorage.getItem("detailsPanePosition");
+    return stored === "bottom" ? "bottom" : "right";
   });
-  const [localSortBy, setLocalSortBy] = useState<SortBy>(() => {
-    const stored = localStorage.getItem("sortByLocal") ?? localStorage.getItem("sortBy");
+  const [sortBy, setSortBy] = useState<SortBy>(() => {
+    const stored = localStorage.getItem("sortBy");
     const available = [...sortPrimaryOptions, ...sortMoreOptions];
     if (stored && available.some((item) => item.value === stored)) {
       return stored as SortBy;
     }
     return "name";
   });
-  const [remoteSortBy, setRemoteSortBy] = useState<SortBy>(() => {
-    const stored = localStorage.getItem("sortByRemote") ?? localStorage.getItem("sortBy");
-    const available = [...sortPrimaryOptions, ...sortMoreOptions];
-    if (stored && available.some((item) => item.value === stored)) {
-      return stored as SortBy;
-    }
-    return "name";
-  });
-  const [localSortOrder, setLocalSortOrder] = useState<SortOrder>(() => {
-    const stored = localStorage.getItem("sortOrderLocal") ?? localStorage.getItem("sortOrder");
+  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
+    const stored = localStorage.getItem("sortOrder");
     return stored === "desc" ? "desc" : "asc";
   });
-  const [remoteSortOrder, setRemoteSortOrder] = useState<SortOrder>(() => {
-    const stored = localStorage.getItem("sortOrderRemote") ?? localStorage.getItem("sortOrder");
-    return stored === "desc" ? "desc" : "asc";
-  });
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [contextPaneSortOpen, setContextPaneSortOpen] = useState(false);
-  const appRef = useRef<HTMLDivElement | null>(null);
-  const [renameState, setRenameState] = useState<RenameState | null>(null);
-  const [clipboardState, setClipboardState] = useState<ClipboardState | null>(null);
-  const [previewState, setPreviewState] = useState<PreviewState | null>(null);
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [historyStack, setHistoryStack] = useState<HistoryAction[]>([]);
-  const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
-
-  const closeContextMenu = () => setContextMenu(null);
-
-  const openContextMenu = (
-    event: ReactMouseEvent,
-    entry: ContextMenuEntry
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setActivePane(entry.scope);
-    if (entry.scope === "local") {
-      setSelectedLocal([entry.path]);
-    } else {
-      setSelectedRemote([entry.name]);
-    }
-    const menuWidth = 260;
-    const menuHeight = 420;
-    const margin = 12;
-    const minX = margin;
-    const minY = margin;
-    const maxX = window.innerWidth - menuWidth - margin;
-    const maxY = window.innerHeight - menuHeight - margin;
-    const nextX = Math.max(minX, Math.min(event.clientX, maxX));
-    const nextY = Math.max(minY, Math.min(event.clientY, maxY));
-    setContextMenu(null);
-    requestAnimationFrame(() => {
-      setContextMenu({ kind: "entry", x: nextX, y: nextY, entry });
-    });
-  };
-
-  const openPaneContextMenu = (
-    event: ReactMouseEvent,
-    scope: "local" | "remote"
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const menuWidth = 260;
-    const menuHeight = 320;
-    const margin = 12;
-    const minX = margin;
-    const minY = margin;
-    const maxX = window.innerWidth - menuWidth - margin;
-    const maxY = window.innerHeight - menuHeight - margin;
-    const nextX = Math.max(minX, Math.min(event.clientX, maxX));
-    const nextY = Math.max(minY, Math.min(event.clientY, maxY));
-    setContextMenu(null);
-    requestAnimationFrame(() => {
-      setContextMenu({ kind: "pane", x: nextX, y: nextY, scope });
-    });
-  };
 
   const queueActive = useMemo(
     () => queue.find((item) => item.status === "active"),
     [queue]
   );
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const root = document.documentElement;
-    root.style.setProperty("--context-menu-x", `${contextMenu.x}px`);
-    root.style.setProperty("--context-menu-y", `${contextMenu.y}px`);
-    return () => {
-      root.style.removeProperty("--context-menu-x");
-      root.style.removeProperty("--context-menu-y");
-    };
-  }, [contextMenu]);
-
-  useEffect(() => {
-    if (contextMenu) return;
-    setContextPaneSortOpen(false);
-  }, [contextMenu]);
-
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const raf = requestAnimationFrame(() => {
-      const menu = document.querySelector(".context-menu.ef-modal") as HTMLElement | null;
-      if (!menu) return;
-      const rect = menu.getBoundingClientRect();
-      const margin = 12;
-      const minX = margin;
-      const minY = margin;
-      const maxX = window.innerWidth - rect.width - margin;
-      const maxY = window.innerHeight - rect.height - margin;
-      const clamp = (value: number, min: number, max: number) =>
-        Math.min(Math.max(value, min), Math.max(min, max));
-      const nextX = clamp(contextMenu.x, minX, maxX);
-      const nextY = clamp(contextMenu.y, minY, maxY);
-      if (nextX === contextMenu.x && nextY === contextMenu.y) return;
-      setContextMenu((prev) =>
-        prev ? { ...prev, x: nextX, y: nextY } : prev
-      );
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [contextMenu]);
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handlePointer = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest(".context-menu")) return;
-      closeContextMenu();
-    };
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeContextMenu();
-    };
-    window.addEventListener("pointerdown", handlePointer);
-    window.addEventListener("keydown", handleKey);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointer);
-      window.removeEventListener("keydown", handleKey);
-    };
-  }, [contextMenu]);
 
   const displayName =
     launchToken?.displayName || launchToken?.email?.split("@")[0] || "Account";
@@ -1368,7 +816,7 @@ export default function App() {
       ? localEntries.filter((entry) => entry.name.toLowerCase().includes(query))
       : localEntries;
     const getValue = (entry: LocalEntry) => {
-      switch (localSortBy) {
+      switch (sortBy) {
         case "type":
           return getExtension(entry.name);
         case "size":
@@ -1391,8 +839,8 @@ export default function App() {
           return entry.name.toLowerCase();
       }
     };
-    return sortEntries(filtered, localSortBy, localSortOrder, getValue);
-  }, [localEntries, localSearch, localSortBy, localSortOrder]);
+    return sortEntries(filtered, sortBy, sortOrder, getValue);
+  }, [localEntries, localSearch, sortBy, sortOrder]);
 
   const filteredRemoteEntries = useMemo(() => {
     const query = remoteSearch.trim().toLowerCase();
@@ -1400,7 +848,7 @@ export default function App() {
       ? remoteEntries.filter((entry) => entry.name.toLowerCase().includes(query))
       : remoteEntries;
     const getValue = (entry: FtpEntry) => {
-      switch (remoteSortBy) {
+      switch (sortBy) {
         case "type":
           return getExtension(entry.name);
         case "size":
@@ -1417,8 +865,8 @@ export default function App() {
           return entry.name.toLowerCase();
       }
     };
-    return sortEntries(filtered, remoteSortBy, remoteSortOrder, getValue);
-  }, [remoteEntries, remoteSearch, remoteSortBy, remoteSortOrder]);
+    return sortEntries(filtered, sortBy, sortOrder, getValue);
+  }, [remoteEntries, remoteSearch, sortBy, sortOrder]);
 
   const detailsItem = useMemo(() => {
     if (activePane === "local") {
@@ -1503,392 +951,6 @@ export default function App() {
       { level, message: safeMessage, timestamp: Date.now() },
       ...prev.slice(0, 199),
     ]);
-  };
-
-  const handleContextOpen = () => {
-    if (!contextMenu) return;
-    if (contextMenu.kind !== "entry") return;
-    const { entry } = contextMenu;
-    closeContextMenu();
-    if (entry.isDir) {
-      if (entry.scope === "local") {
-        refreshLocal(entry.path);
-      } else {
-        refreshRemote(buildRemotePath(remotePath || "/", entry.name));
-      }
-      return;
-    }
-    if (entry.scope === "local" && (entry.isImage || entry.isVideo)) {
-      setPreviewState({
-        name: entry.name,
-        path: entry.path,
-        isImage: entry.isImage,
-        isVideo: entry.isVideo,
-        scope: entry.scope,
-      });
-      return;
-    }
-    if (entry.scope === "local") {
-      if (!isTauri) {
-        addLog("error", "Opening local files requires the desktop app.");
-        return;
-      }
-      invoke("launch_path", { path: entry.path }).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        addLog("error", message);
-      });
-      return;
-    }
-    enqueueDownloadNames([entry.name]).catch(() => null);
-  };
-
-  const handleContextRename = () => {
-    if (!contextMenu) return;
-    if (contextMenu.kind !== "entry") return;
-    const { entry } = contextMenu;
-    closeContextMenu();
-    startInlineRename(entry);
-  };
-
-  const handleContextDelete = () => {
-    if (!contextMenu) return;
-    if (contextMenu.kind !== "entry") return;
-    const { entry } = contextMenu;
-    closeContextMenu();
-    if (entry.scope === "local") {
-      openModalForDelete("local", {
-        name: entry.name,
-        path: entry.path,
-        isDir: entry.isDir,
-      });
-    } else {
-      openModalForDelete("remote", {
-        name: entry.name,
-        path: entry.name,
-        isDir: entry.isDir,
-      });
-    }
-  };
-
-  const handleContextProperties = () => {
-    if (!contextMenu) return;
-    if (contextMenu.kind !== "entry") return;
-    const { entry } = contextMenu;
-    closeContextMenu();
-    if (entry.scope === "local") {
-      if (!isTauri) {
-        addLog("error", "Properties are only available in the desktop app.");
-        return;
-      }
-      invoke("open_properties", { path: entry.path }).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        addLog("error", message);
-      });
-      return;
-    }
-    setActivePane("remote");
-    setSelectedRemote([entry.name]);
-  };
-
-  const handleContextCopyPath = async () => {
-    if (!contextEntry) return;
-    const value = contextEntry.path;
-    closeContextMenu();
-    try {
-      if (!navigator.clipboard) {
-        addLog("error", "Clipboard unavailable.");
-        return;
-      }
-      await navigator.clipboard.writeText(value);
-      addLog("info", "Path copied to clipboard.");
-    } catch {
-      addLog("error", "Unable to copy path.");
-    }
-  };
-
-  const handleContextCut = () => {
-    if (!contextEntry) return;
-    setClipboardState({
-      mode: "cut",
-      scope: contextEntry.scope,
-      entries: [
-        {
-          name: contextEntry.name,
-          path: contextEntry.path,
-          isDir: contextEntry.isDir,
-        },
-      ],
-    });
-    closeContextMenu();
-  };
-
-  const handleContextCopy = () => {
-    if (!contextEntry) return;
-    setClipboardState({
-      mode: "copy",
-      scope: contextEntry.scope,
-      entries: [
-        {
-          name: contextEntry.name,
-          path: contextEntry.path,
-          isDir: contextEntry.isDir,
-        },
-      ],
-    });
-    closeContextMenu();
-  };
-
-  const handleContextPaste = async () => {
-    if (!clipboardState || !contextScope) return;
-    const { mode, scope, entries } = clipboardState;
-    closeContextMenu();
-    try {
-      if (contextScope === "local") {
-        if (!isTauri) {
-          addLog("error", "Pasting into local files requires the desktop app.");
-          return;
-        }
-        if (!localPath || localPath === "this_pc") {
-          addLog("error", "Select a local folder to paste into.");
-          return;
-        }
-        const created: { path: string; isDir: boolean }[] = [];
-        for (const entry of entries) {
-          const target = await join(localPath, entry.name);
-          if (scope === "local") {
-            if (mode === "cut") {
-              await invoke("rename_local", { from: entry.path, to: target });
-            } else {
-              await invoke("copy_local", { from: entry.path, to: target });
-            }
-            created.push({ path: target, isDir: entry.isDir });
-          } else {
-            enqueueDownloadNames([entry.name]).catch(() => null);
-          }
-        }
-        await refreshLocal(localPath);
-        if (scope === "local") {
-          const actionType = mode === "cut" ? "Move" : "Copy";
-          pushHistory({
-            label: actionType,
-            undo: async () => {
-              if (mode === "cut") {
-                for (const entry of entries) {
-                  const target = await join(localPath, entry.name);
-                  await invoke("rename_local", { from: target, to: entry.path });
-                }
-              } else {
-                for (const item of created) {
-                  await deleteEntry("local", item.path, item.isDir);
-                }
-              }
-              await refreshLocal(localPath);
-            },
-            redo: async () => {
-              for (const entry of entries) {
-                const target = await join(localPath, entry.name);
-                if (mode === "cut") {
-                  await invoke("rename_local", { from: entry.path, to: target });
-                } else {
-                  await invoke("copy_local", { from: entry.path, to: target });
-                }
-              }
-              await refreshLocal(localPath);
-            },
-          });
-        }
-      } else {
-        if (!connected) {
-          addLog("error", "Connect to a server to paste.");
-          return;
-        }
-        const created: { path: string; isDir: boolean; name: string }[] = [];
-        for (const entry of entries) {
-          const target = buildRemotePath(remotePath || "/", entry.name);
-          if (scope === "remote") {
-            if (mode === "cut") {
-              if (isTauri) {
-                await invoke("rename_path", { from: entry.path, to: target });
-              } else {
-                await ftpRequest("rename", {
-                  host,
-                  port,
-                  username,
-                  password,
-                  from: entry.path,
-                  to: target,
-                  protocol,
-                  sftpPort,
-                });
-              }
-            } else {
-              if (isTauri) {
-                await invoke("copy_remote", { from: entry.path, to: target, isDir: entry.isDir });
-              } else {
-                if (entry.isDir) {
-                  addLog("error", "Remote folder copy is not supported in the browser.");
-                  continue;
-                }
-                const sendDownload = async (protocolOverride?: "ftp" | "sftp") => {
-                  const actualProtocol = protocolOverride ?? protocol;
-                  const response = await fetch(`${apiBase}/api/ftp/download`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      host,
-                      port,
-                      username,
-                      password,
-                      remotePath: entry.path,
-                      filename: entry.name,
-                      tier: isPremium ? "premium" : "free",
-                      downloadLimitKbps: isPremium ? downloadLimitKbps : 0,
-                      protocol: actualProtocol,
-                      sftpPort: actualProtocol === "sftp" ? sftpPort : undefined,
-                    }),
-                  });
-                  if (!response.ok) {
-                    const text = await response.text();
-                    throw new Error(text || response.statusText);
-                  }
-                  return await response.blob();
-                };
-                let blob: Blob;
-                try {
-                  blob = await sendDownload();
-                } catch (error) {
-                  const message = error instanceof Error ? error.message : String(error);
-                  if (!shouldFallbackToSftp(message)) throw error;
-                  blob = await sendDownload("sftp");
-                }
-                const form = new FormData();
-                form.append("host", host);
-                form.append("port", String(port));
-                form.append("username", username);
-                form.append("password", password);
-                form.append("protocol", protocol);
-                form.append("sftpPort", String(sftpPort));
-                form.append("path", target);
-                form.append("file", blob, entry.name);
-                const response = await fetch(`${apiBase}/api/ftp/upload`, {
-                  method: "POST",
-                  body: form,
-                });
-                if (!response.ok) {
-                  const text = await response.text();
-                  throw new Error(text || response.statusText);
-                }
-              }
-            }
-            created.push({ path: target, isDir: entry.isDir, name: entry.name });
-          } else {
-            enqueueUploadPaths([entry.path]);
-          }
-        }
-        await refreshRemote();
-        if (scope === "remote") {
-          const actionType = mode === "cut" ? "Move" : "Copy";
-          pushHistory({
-            label: actionType,
-            undo: async () => {
-              if (mode === "cut") {
-                for (const entry of entries) {
-                  const target = buildRemotePath(remotePath || "/", entry.name);
-                  if (isTauri) {
-                    await invoke("rename_path", { from: target, to: entry.path });
-                  } else {
-                    await ftpRequest("rename", {
-                      host,
-                      port,
-                      username,
-                      password,
-                      from: target,
-                      to: entry.path,
-                      protocol,
-                      sftpPort,
-                    });
-                  }
-                }
-              } else {
-                for (const item of created) {
-                  await deleteEntry("remote", item.path, item.isDir);
-                }
-              }
-              await refreshRemote();
-            },
-            redo: async () => {
-              for (const entry of entries) {
-                const target = buildRemotePath(remotePath || "/", entry.name);
-                if (mode === "cut") {
-                  if (isTauri) {
-                    await invoke("rename_path", { from: entry.path, to: target });
-                  } else {
-                    await ftpRequest("rename", {
-                      host,
-                      port,
-                      username,
-                      password,
-                      from: entry.path,
-                      to: target,
-                      protocol,
-                      sftpPort,
-                    });
-                  }
-                } else {
-                  if (isTauri) {
-                    await invoke("copy_remote", { from: entry.path, to: target, isDir: entry.isDir });
-                  } else {
-                    if (entry.isDir) {
-                      addLog("error", "Remote folder copy redo not supported in browser.");
-                    } else {
-                      addLog("error", "Remote copy redo not supported in browser.");
-                    }
-                  }
-                }
-              }
-              await refreshRemote();
-            },
-          });
-        }
-      }
-      if (mode === "cut") {
-        setClipboardState(null);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const handleContextNewFolder = () => {
-    if (!contextScope) return;
-    closeContextMenu();
-    createNewFolder(contextScope);
-  };
-
-  const handleContextNewTextFile = () => {
-    if (!contextScope) return;
-    closeContextMenu();
-    createNewTextFile(contextScope);
-  };
-
-  const handleContextOpenWith = () => {
-    if (!contextEntry) return;
-    closeContextMenu();
-    if (contextEntry.scope !== "local") {
-      addLog("error", "Open with is only available for local files.");
-      return;
-    }
-    if (!isTauri) {
-      addLog("error", "Open with is only available in the desktop app.");
-      return;
-    }
-    invoke("open_with_dialog", { path: contextEntry.path }).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    });
   };
 
   const refreshRemote = async (path?: string, force?: boolean) => {
@@ -2210,29 +1272,20 @@ export default function App() {
   }, [remotePath]);
 
   useEffect(() => {
-    localStorage.setItem("viewModeLocal", localViewMode);
-  }, [localViewMode]);
+    localStorage.setItem("viewMode", viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
-    localStorage.setItem("viewModeRemote", remoteViewMode);
-  }, [remoteViewMode]);
-
-
-  useEffect(() => {
-    localStorage.setItem("sortByLocal", localSortBy);
-  }, [localSortBy]);
+    localStorage.setItem("detailsPanePosition", detailsPanePosition);
+  }, [detailsPanePosition]);
 
   useEffect(() => {
-    localStorage.setItem("sortByRemote", remoteSortBy);
-  }, [remoteSortBy]);
+    localStorage.setItem("sortBy", sortBy);
+  }, [sortBy]);
 
   useEffect(() => {
-    localStorage.setItem("sortOrderLocal", localSortOrder);
-  }, [localSortOrder]);
-
-  useEffect(() => {
-    localStorage.setItem("sortOrderRemote", remoteSortOrder);
-  }, [remoteSortOrder]);
+    localStorage.setItem("sortOrder", sortOrder);
+  }, [sortOrder]);
 
   useEffect(() => {
     localStorage.setItem("openOnStartup", String(openOnStartup));
@@ -2260,8 +1313,8 @@ export default function App() {
   }, [openOnStartup, closeToTray, minimizeToTray]);
 
   useEffect(() => {
-    const thumbSize = viewThumbSize(localViewMode);
-    if (localViewMode === "details") return;
+    const thumbSize = viewThumbSize(viewMode);
+    if (viewMode === "details") return;
     if (!isTauri) {
       const next = { ...imageCache };
       let changed = false;
@@ -2313,11 +1366,11 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [filteredLocalEntries, imageCache, localViewMode]);
+  }, [filteredLocalEntries, imageCache, viewMode]);
 
   useEffect(() => {
-    const thumbSize = viewThumbSize(localViewMode);
-    if (localViewMode === "details") return;
+    const thumbSize = viewThumbSize(viewMode);
+    if (viewMode === "details") return;
     if (!isTauri) return;
     const targets = filteredLocalEntries
       .filter((entry) => !entry.is_dir && isVideoFile(entry.name))
@@ -2355,7 +1408,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [filteredLocalEntries, videoThumbCache, localViewMode]);
+  }, [filteredLocalEntries, videoThumbCache, viewMode]);
 
   useEffect(() => {
     if (!isTauri) return;
@@ -2593,32 +1646,17 @@ export default function App() {
     }, 150);
   };
 
+
   const openActiveRename = () => {
     if (activePane === "local") {
       const target = selectedLocal[0];
       const entry = localEntries.find((item) => item.path === target);
       if (!entry) return;
-      startInlineRename({
-        scope: "local",
-        name: entry.name,
-        path: entry.path,
-        isDir: entry.is_dir,
-        isImage: !entry.is_dir && isImageFile(entry.name),
-        isVideo: !entry.is_dir && isVideoFile(entry.name),
-      });
+      openModalForRename("local", { name: entry.name, path: entry.path });
     } else {
       const target = selectedRemote[0];
       if (!target) return;
-      const entry = remoteEntries.find((item) => item.name === target);
-      if (!entry) return;
-      startInlineRename({
-        scope: "remote",
-        name: entry.name,
-        path: buildRemotePath(remotePath || "/", entry.name),
-        isDir: entry.is_dir,
-        isImage: !entry.is_dir && isImageFile(entry.name),
-        isVideo: !entry.is_dir && isVideoFile(entry.name),
-      });
+      openModalForRename("remote", { name: target, path: target });
     }
   };
 
@@ -2679,6 +1717,16 @@ export default function App() {
     enqueueDownloadNames(selectedRemote).catch(() => null);
   };
 
+  const openModalForMkdir = (scope: "local" | "remote") => {
+    setModal({ type: "mkdir", scope });
+    setModalValue("");
+  };
+
+  const openModalForRename = (scope: "local" | "remote", target: { name: string; path: string }) => {
+    setModal({ type: "rename", scope, targetName: target.name, targetPath: target.path });
+    setModalValue(target.name);
+  };
+
   const openModalForDelete = (scope: "local" | "remote", target: { name: string; path: string; isDir: boolean }) => {
     setModal({
       type: "delete",
@@ -2699,6 +1747,79 @@ export default function App() {
     if (!modal) return;
 
     try {
+      if (modal.type === "mkdir") {
+        if (!modalValue.trim()) {
+          addLog("error", "Folder name required.");
+          return;
+        }
+        if (modal.scope === "local") {
+          if (!isTauri) {
+            addLog("error", "Local folders are not available in the browser.");
+            return;
+          }
+          const target = await join(localPath, modalValue.trim());
+          await invoke("create_local_dir", { path: target });
+          await refreshLocal(localPath);
+        } else {
+          const target = buildRemotePath(remotePath || "/", modalValue.trim());
+          if (isTauri) {
+            await invoke("create_dir", { path: target });
+          } else {
+            await ftpRequest("mkdir", {
+              host,
+              port,
+              username,
+              password,
+              path: target,
+              protocol,
+              sftpPort,
+            });
+          }
+          await refreshRemote();
+        }
+      }
+
+      if (modal.type === "rename") {
+        if (!modalValue.trim()) {
+          addLog("error", "New name required.");
+          return;
+        }
+        if (modal.scope === "local") {
+          if (!isTauri) {
+            setLocalEntries((prev) =>
+              prev.map((entry) =>
+                entry.path === modal.targetPath
+                  ? { ...entry, name: modalValue.trim() }
+                  : entry
+              )
+            );
+          } else {
+            const parent = await dirname(modal.targetPath);
+            const target = await join(parent, modalValue.trim());
+            await invoke("rename_local", { from: modal.targetPath, to: target });
+            await refreshLocal(localPath);
+          }
+        } else {
+          const from = buildRemotePath(remotePath || "/", modal.targetName);
+          const to = buildRemotePath(remotePath || "/", modalValue.trim());
+          if (isTauri) {
+            await invoke("rename_path", { from, to });
+          } else {
+            await ftpRequest("rename", {
+              host,
+              port,
+              username,
+              password,
+              from,
+              to,
+              protocol,
+              sftpPort,
+            });
+          }
+          await refreshRemote();
+        }
+      }
+
       if (modal.type === "delete") {
         if (modal.scope === "local") {
           if (!isTauri) {
@@ -2752,390 +1873,6 @@ export default function App() {
       }
 
       closeModal();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const getUniqueName = (baseName: string, existing: string[]) => {
-    const lower = new Set(existing.map((item) => item.toLowerCase()));
-    if (!lower.has(baseName.toLowerCase())) return baseName;
-    const dotIndex = baseName.lastIndexOf(".");
-    const hasExtension = dotIndex > 0 && dotIndex < baseName.length - 1;
-    const stem = hasExtension ? baseName.slice(0, dotIndex) : baseName;
-    const ext = hasExtension ? baseName.slice(dotIndex) : "";
-    let index = 2;
-    let candidate = `${stem} (${index})${ext}`;
-    while (lower.has(candidate.toLowerCase())) {
-      index += 1;
-      candidate = `${stem} (${index})${ext}`;
-    }
-    return candidate;
-  };
-
-  const getScopeEntries = (scope: "local" | "remote") =>
-    scope === "local" ? localEntries : remoteEntries;
-
-  const deleteEntry = async (scope: "local" | "remote", path: string, isDir: boolean) => {
-    if (scope === "local") {
-      if (!isTauri) {
-        setLocalEntries((prev) => prev.filter((entry) => entry.path !== path));
-        return;
-      }
-      await invoke("delete_local", { path, isDir });
-      await refreshLocal(localPath);
-      return;
-    }
-    if (isTauri) {
-      await invoke("delete_path", { path, isDir });
-    } else {
-      await ftpRequest("delete", {
-        host,
-        port,
-        username,
-        password,
-        path,
-        is_dir: isDir,
-        protocol,
-        sftpPort,
-      });
-    }
-    await refreshRemote();
-  };
-
-  const createFolderAt = async (scope: "local" | "remote", path: string) => {
-    if (scope === "local") {
-      if (!isTauri) {
-        addLog("error", "Local folders are not available in the browser.");
-        return;
-      }
-      await invoke("create_local_dir", { path });
-      await refreshLocal(localPath);
-      return;
-    }
-    if (isTauri) {
-      await invoke("create_dir", { path });
-    } else {
-      await ftpRequest("mkdir", {
-        host,
-        port,
-        username,
-        password,
-        path,
-        protocol,
-        sftpPort,
-      });
-    }
-    await refreshRemote();
-  };
-
-  const createFileAt = async (scope: "local" | "remote", path: string, name: string) => {
-    if (scope === "local") {
-      if (!isTauri) {
-        addLog("error", "Local files are not available in the browser.");
-        return;
-      }
-      await invoke("create_local_file", { path });
-      await refreshLocal(localPath);
-      return;
-    }
-    if (isTauri) {
-      await invoke("create_remote_file", { path });
-    } else {
-      const blob = new Blob([""], { type: "text/plain" });
-      const form = new FormData();
-      form.append("host", host);
-      form.append("port", String(port));
-      form.append("username", username);
-      form.append("password", password);
-      form.append("protocol", protocol);
-      form.append("sftpPort", String(sftpPort));
-      form.append("path", path);
-      form.append("file", blob, name);
-      const response = await fetch(`${apiBase}/api/ftp/upload`, {
-        method: "POST",
-        body: form,
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || response.statusText);
-      }
-    }
-    await refreshRemote();
-  };
-
-  const startInlineRename = (entry: ContextMenuEntry) => {
-    setRenameState({
-      scope: entry.scope,
-      path: entry.path,
-      name: entry.name,
-      isDir: entry.isDir,
-      value: entry.name,
-    });
-  };
-
-  const cancelInlineRename = () => setRenameState(null);
-
-  const pushHistory = (action: HistoryAction) => {
-    setHistoryStack((prev) => [action, ...prev].slice(0, 50));
-    setRedoStack([]);
-  };
-
-  const undoLast = async () => {
-    const action = historyStack[0];
-    if (!action) return;
-    try {
-      await action.undo();
-      setHistoryStack((prev) => prev.slice(1));
-      setRedoStack((prev) => [action, ...prev]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const redoLast = async () => {
-    const action = redoStack[0];
-    if (!action) return;
-    try {
-      await action.redo();
-      setRedoStack((prev) => prev.slice(1));
-      setHistoryStack((prev) => [action, ...prev]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const commitInlineRename = async () => {
-    if (!renameState) return;
-    const nextName = renameState.value.trim();
-    if (!nextName || nextName === renameState.name) {
-      cancelInlineRename();
-      return;
-    }
-    try {
-      let toPath = renameState.path;
-      if (renameState.scope === "local") {
-        if (!isTauri) {
-          setLocalEntries((prev) =>
-            prev.map((entry) =>
-              entry.path === renameState.path
-                ? { ...entry, name: nextName }
-                : entry
-            )
-          );
-        } else {
-          const parent = await dirname(renameState.path);
-          const target = await join(parent, nextName);
-          toPath = target;
-          await invoke("rename_local", { from: renameState.path, to: target });
-          await refreshLocal(localPath);
-        }
-      } else {
-        const from = buildRemotePath(remotePath || "/", renameState.name);
-        const to = buildRemotePath(remotePath || "/", nextName);
-        if (isTauri) {
-          await invoke("rename_path", { from, to });
-        } else {
-          await ftpRequest("rename", {
-            host,
-            port,
-            username,
-            password,
-            from,
-            to,
-            protocol,
-            sftpPort,
-          });
-        }
-        await refreshRemote();
-      }
-      const fromName = renameState.name;
-      const fromPath = renameState.path;
-      const scope = renameState.scope;
-      const renameTargetPath = toPath;
-      pushHistory({
-        label: "Rename",
-        undo: async () => {
-          if (scope === "local") {
-            if (!isTauri) {
-              setLocalEntries((prev) =>
-                prev.map((entry) =>
-                  entry.path === fromPath ? { ...entry, name: fromName } : entry
-                )
-              );
-            } else {
-              const parent = await dirname(fromPath);
-              const target = await join(parent, fromName);
-              await invoke("rename_local", { from: renameTargetPath, to: target });
-              await refreshLocal(localPath);
-            }
-          } else {
-            const from = buildRemotePath(remotePath || "/", nextName);
-            const to = buildRemotePath(remotePath || "/", fromName);
-            if (isTauri) {
-              await invoke("rename_path", { from, to });
-            } else {
-              await ftpRequest("rename", {
-                host,
-                port,
-                username,
-                password,
-                from,
-                to,
-                protocol,
-                sftpPort,
-              });
-            }
-            await refreshRemote();
-          }
-        },
-        redo: async () => {
-          if (scope === "local") {
-            if (!isTauri) {
-              setLocalEntries((prev) =>
-                prev.map((entry) =>
-                  entry.path === fromPath ? { ...entry, name: nextName } : entry
-                )
-              );
-            } else {
-              const parent = await dirname(fromPath);
-              const target = await join(parent, nextName);
-              await invoke("rename_local", { from: fromPath, to: target });
-              await refreshLocal(localPath);
-            }
-          } else {
-            const from = buildRemotePath(remotePath || "/", fromName);
-            const to = buildRemotePath(remotePath || "/", nextName);
-            if (isTauri) {
-              await invoke("rename_path", { from, to });
-            } else {
-              await ftpRequest("rename", {
-                host,
-                port,
-                username,
-                password,
-                from,
-                to,
-                protocol,
-                sftpPort,
-              });
-            }
-            await refreshRemote();
-          }
-        },
-      });
-      cancelInlineRename();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const handleRenameKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitInlineRename();
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelInlineRename();
-    }
-  };
-
-  const createNewFolder = async (scope: "local" | "remote") => {
-    const entries = getScopeEntries(scope);
-    const defaultName = getUniqueName("New folder", entries.map((item) => item.name));
-    try {
-      if (scope === "local") {
-        if (!isTauri) {
-          addLog("error", "Local folders are not available in the browser.");
-          return;
-        }
-        const target = await join(localPath, defaultName);
-        await createFolderAt("local", target);
-        pushHistory({
-          label: "New folder",
-          undo: async () => deleteEntry("local", target, true),
-          redo: async () => createFolderAt("local", target),
-        });
-        startInlineRename({
-          scope: "local",
-          name: defaultName,
-          path: target,
-          isDir: true,
-          isImage: false,
-          isVideo: false,
-        });
-      } else {
-        const target = buildRemotePath(remotePath || "/", defaultName);
-        await createFolderAt("remote", target);
-        pushHistory({
-          label: "New folder",
-          undo: async () => deleteEntry("remote", target, true),
-          redo: async () => createFolderAt("remote", target),
-        });
-        startInlineRename({
-          scope: "remote",
-          name: defaultName,
-          path: target,
-          isDir: true,
-          isImage: false,
-          isVideo: false,
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      addLog("error", message);
-    }
-  };
-
-  const createNewTextFile = async (scope: "local" | "remote") => {
-    const entries = getScopeEntries(scope);
-    const defaultName = getUniqueName(
-      "New text file.txt",
-      entries.map((item) => item.name)
-    );
-    try {
-      if (scope === "local") {
-        if (!isTauri) {
-          addLog("error", "Local files are not available in the browser.");
-          return;
-        }
-        const target = await join(localPath, defaultName);
-        await createFileAt("local", target, defaultName);
-        pushHistory({
-          label: "New text file",
-          undo: async () => deleteEntry("local", target, false),
-          redo: async () => createFileAt("local", target, defaultName),
-        });
-        startInlineRename({
-          scope: "local",
-          name: defaultName,
-          path: target,
-          isDir: false,
-          isImage: false,
-          isVideo: false,
-        });
-      } else {
-        const target = buildRemotePath(remotePath || "/", defaultName);
-        await createFileAt("remote", target, defaultName);
-        pushHistory({
-          label: "New text file",
-          undo: async () => deleteEntry("remote", target, false),
-          redo: async () => createFileAt("remote", target, defaultName),
-        });
-        startInlineRename({
-          scope: "remote",
-          name: defaultName,
-          path: target,
-          isDir: false,
-          isImage: false,
-          isVideo: false,
-        });
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       addLog("error", message);
@@ -3291,7 +2028,8 @@ export default function App() {
     }
   };
 
-  const detailsPaneClass = "workspace details-right";
+  const detailsPaneClass =
+    detailsPanePosition === "bottom" ? "workspace details-bottom" : "workspace details-right";
 
   const selectedFtp = ftpBookmarks.find((item) => item.name === selectedFtpBookmark) ?? null;
 
@@ -3424,64 +2162,9 @@ export default function App() {
     }));
   }, [detailsItem, videoPreviewCache, videoPreviewErrors]);
 
-  useEffect(() => {
-    if (!previewState) {
-      setPreviewSrc(null);
-      return;
-    }
-    if (previewState.scope !== "local") return;
-    if (isTauri) {
-      setPreviewSrc(convertFileSrc(previewState.path));
-      return;
-    }
-    const entry = localEntries.find((item) => item.path === previewState.path);
-    if (!entry?.file) return;
-    const url = URL.createObjectURL(entry.file);
-    setPreviewSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [previewState, localEntries, isTauri]);
-
-  const contextEntry = contextMenu?.kind === "entry" ? contextMenu.entry : null;
-  const contextScope =
-    contextMenu?.kind === "pane" ? contextMenu.scope : contextEntry?.scope ?? null;
-  const contextDisableLocalActions =
-    contextScope === "local" && localPath === "this_pc";
-  const contextCanOpen = Boolean(contextEntry);
-  const contextCanCreate =
-    contextScope === "remote"
-      ? connected
-      : isTauri && localPath !== "this_pc" && Boolean(localPath);
-  const contextCanPaste = Boolean(clipboardState) && Boolean(contextScope);
-  const contextCanUndo = historyStack.length > 0;
-  const contextCanRedo = redoStack.length > 0;
-  const contextViewMode =
-    contextScope === "local"
-      ? localViewMode
-      : contextScope === "remote"
-        ? remoteViewMode
-        : null;
-  const applyContextSortBy = (value: SortBy) => {
-    if (contextScope === "local") {
-      setLocalSortBy(value);
-    } else if (contextScope === "remote") {
-      setRemoteSortBy(value);
-    }
-  };
-  const applyContextSortOrder = (value: SortOrder) => {
-    if (contextScope === "local") {
-      setLocalSortOrder(value);
-    } else if (contextScope === "remote") {
-      setRemoteSortOrder(value);
-    }
-  };
-  const contextMenuResetKey = contextMenu
-    ? `${contextMenu.kind}-${contextMenu.x}-${contextMenu.y}`
-    : "closed";
-
   return (
     <div
       className="page app explorer"
-      ref={appRef}
       onDragEnter={
         isTauri
           ? undefined
@@ -3543,8 +2226,8 @@ export default function App() {
                   type="button"
                   onClick={() =>
                     activePane === "local"
-                      ? createNewFolder("local")
-                      : createNewFolder("remote")
+                      ? openModalForMkdir("local")
+                      : openModalForMkdir("remote")
                   }
                   disabled={
                     activePane === "local"
@@ -3603,44 +2286,119 @@ export default function App() {
             id: "view",
             label: "View",
             content: (
-              <SideMenu resetKey={menuOpen === "view" ? "open" : "closed"}>
-                <SideMenuSubmenu
-                  id="theme"
-                  className="ef-menu-group"
-                  panelClassName="ef-menu-sub ef-menu-sub--header"
-                  enableViewportFlip
-                  variant="header"
-                  trigger={(triggerProps) => (
-                    <button
+              <>
+                <div className="ef-menu-item has-submenu" role="button" tabIndex={0}>
+                  <span>View mode</span>
+                  <span className="ef-menu-sub-caret">
+                    <IconChevronDown />
+                  </span>
+                  <div className="ef-menu-sub">
+                    {viewModeOptions.map((item) => (
+                      <Button
+                        key={item.value}
+                        className="ef-menu-item"
+                        type="button"
+                        onClick={() => setViewMode(item.value)}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="ef-menu-item has-submenu" role="button" tabIndex={0}>
+                  <span>Theme</span>
+                  <span className="ef-menu-sub-caret">
+                    <IconChevronDown />
+                  </span>
+                  <div className="ef-menu-sub">
+                    {themeOptions.map((item) => (
+                      <Button
+                        key={item.value}
+                        className="ef-menu-item"
+                        type="button"
+                        onClick={() => setThemeMode(item.value)}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="ef-menu-item has-submenu" role="button" tabIndex={0}>
+                  <span>Details pane</span>
+                  <span className="ef-menu-sub-caret">
+                    <IconChevronDown />
+                  </span>
+                  <div className="ef-menu-sub">
+                    <Button
                       className="ef-menu-item"
                       type="button"
-                      onClick={triggerProps.onClick}
-                      aria-expanded={triggerProps["aria-expanded"]}
-                      disabled={triggerProps.disabled}
+                      onClick={() => setDetailsPanePosition("right")}
                     >
-                      <span>Theme</span>
-                      <span className="ef-menu-sub-caret">
-                        <IconChevronDown />
-                      </span>
-                    </button>
-                  )}
-                >
-                  {themeOptions.map((item) => (
-                    <Button
-                      key={item.value}
-                      className={`theme-preview theme-preview--${item.value}`}
-                      variant="primary"
-                      type="button"
-                      onClick={() => {
-                        setThemeMode(item.value);
-                        closeMenu();
-                      }}
-                    >
-                      {item.label}
+                      Right
                     </Button>
-                  ))}
-                </SideMenuSubmenu>
-              </SideMenu>
+                    <Button
+                      className="ef-menu-item"
+                      type="button"
+                      onClick={() => setDetailsPanePosition("bottom")}
+                    >
+                      Bottom
+                    </Button>
+                  </div>
+                </div>
+                <div className="ef-menu-divider" />
+                <div className="ef-menu-item has-submenu" role="button" tabIndex={0}>
+                  <span>Sort by</span>
+                  <span className="ef-menu-sub-caret">
+                    <IconChevronDown />
+                  </span>
+                  <div className="ef-menu-sub">
+                    {sortPrimaryOptions.map((item) => (
+                      <Button
+                        key={item.value}
+                        className="ef-menu-item"
+                        type="button"
+                        onClick={() => setSortBy(item.value)}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                    <div className="ef-menu-divider" />
+                    <div className="ef-menu-group-title">More</div>
+                    {sortMoreOptions.map((item) => (
+                      <Button
+                        key={item.value}
+                        className="ef-menu-item"
+                        type="button"
+                        onClick={() => setSortBy(item.value)}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="ef-menu-item has-submenu" role="button" tabIndex={0}>
+                  <span>Order</span>
+                  <span className="ef-menu-sub-caret">
+                    <IconChevronDown />
+                  </span>
+                  <div className="ef-menu-sub">
+                    <Button
+                      className="ef-menu-item"
+                      type="button"
+                      onClick={() => setSortOrder("asc")}
+                    >
+                      Ascending
+                    </Button>
+                    <Button
+                      className="ef-menu-item"
+                      type="button"
+                      onClick={() => setSortOrder("desc")}
+                    >
+                      Descending
+                    </Button>
+                  </div>
+                </div>
+              </>
             ),
           },
           {
@@ -3831,12 +2589,11 @@ export default function App() {
         </Panel>
       </header>
 
-      <main className="shell" ref={shellRef}>
+      <main className="shell">
         <Panel
           variant="card"
           borderWidth={1}
           className="sidebar"
-          ref={sidebarRef}
           onDragEnter={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
@@ -3940,14 +2697,8 @@ export default function App() {
           </div>
 
         </Panel>
-        <div
-          className="resize-handle resize-handle--sidebar"
-          role="separator"
-          aria-orientation="vertical"
-          onPointerDown={startResize("sidebar")}
-        />
 
-        <section className={detailsPaneClass} ref={workspaceRef}>
+        <section className={detailsPaneClass}>
           <section className="panes explorer-panes">
             <Panel
               variant="card"
@@ -3985,7 +2736,7 @@ export default function App() {
                     {isTauri ? (
                       <>
                         <Button
-                          onClick={() => createNewFolder("local")}
+                          onClick={() => openModalForMkdir("local")}
                           disabled={!localPath || localPath === "this_pc"}
                         >
                           New folder
@@ -4004,30 +2755,6 @@ export default function App() {
                     ) : (
                       <Button onClick={openLocalFolder}>Add files</Button>
                     )}
-                    <Dropdown
-                      variant="bookmark"
-                      layout="field"
-                      label="View"
-                      triggerLabel="View"
-                      value={localViewMode}
-                      onChange={(next) => setLocalViewMode(next as ViewMode)}
-                      renderItemIcon={(option) => getViewModeIcon(option.value as ViewMode)}
-                      renderTriggerIcon={getViewModeIcon(localViewMode)}
-                      sections={[
-                        {
-                          options: viewModeOptions.map((item) => ({
-                            value: item.value,
-                            label: item.label,
-                          })),
-                        },
-                      ]}
-                    />
-                    <PaneSortMenu
-                      sortBy={localSortBy}
-                      sortOrder={localSortOrder}
-                      onSortBy={setLocalSortBy}
-                      onSortOrder={setLocalSortOrder}
-                    />
                   </div>
                 </div>
 
@@ -4065,23 +2792,14 @@ export default function App() {
               </div>
 
               <div
-                className={`pane-body view-${localViewMode}`}
+                className={`pane-body view-${viewMode}`}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
                 }}
                 onDrop={handleDropLocal}
-                onContextMenu={(event) => {
-                  if (
-                    (event.target as HTMLElement).closest(".entry-card") ||
-                    (event.target as HTMLElement).closest(".table-row")
-                  ) {
-                    return;
-                  }
-                  openPaneContextMenu(event, "local");
-                }}
               >
-                {localViewMode === "details" ? (
+                {viewMode === "details" ? (
                   <>
                     <Panel variant="highlight" borderWidth={1} className="table-row table-head">
                       <span>Name</span>
@@ -4096,31 +2814,12 @@ export default function App() {
                         const isSelected = selectedLocal.includes(entry.path);
                         const keys = filteredLocalEntries.map((item) => item.path);
                         const isPinned = localBookmarks.some((item) => item.path === entry.path);
-                        const isImage = !entry.is_dir && isImageFile(entry.name);
-                        const isVideo = !entry.is_dir && isVideoFile(entry.name);
-                        const entryIcon = getEntryTypeIcon({
-                          isDir: entry.is_dir,
-                          isImage,
-                          isVideo,
-                        });
-                        const isRenaming =
-                          renameState?.scope === "local" && renameState.path === entry.path;
                         return (
                           <Panel
                             key={entry.path}
                             variant="card"
                             borderWidth={1}
                             className={`table-row ${isSelected ? "selected" : ""}`}
-                            onContextMenu={(event) =>
-                              openContextMenu(event, {
-                                scope: "local",
-                                name: entry.name,
-                                path: entry.path,
-                                isDir: entry.is_dir,
-                                isImage,
-                                isVideo,
-                              })
-                            }
                             draggable={!isTauri}
                             onDragStart={(event) => {
                               const payload: DragPayload = {
@@ -4187,35 +2886,8 @@ export default function App() {
                             }}
                           >
                             <span className="name-cell">
-                              <span
-                                className={`entry-dot-icon ${
-                                  entry.is_dir
-                                    ? "dir"
-                                    : isImage
-                                      ? "image"
-                                      : isVideo
-                                        ? "video"
-                                        : "file"
-                                }`}
-                              >
-                                {entryIcon}
-                              </span>
-                              {isRenaming ? (
-                                <Input
-                                  value={renameState?.value ?? ""}
-                                  onChange={(event) =>
-                                    setRenameState((prev) =>
-                                      prev ? { ...prev, value: event.target.value } : prev
-                                    )
-                                  }
-                                  onKeyDown={handleRenameKeyDown}
-                                  onClick={(event) => event.stopPropagation()}
-                                  onBlur={commitInlineRename}
-                                  autoFocus
-                                />
-                              ) : (
-                                <span className="name-text">{entry.name}</span>
-                              )}
+                              <span className={`entry-dot ${entry.is_dir ? "dir" : "file"}`} />
+                              <span className="name-text">{entry.name}</span>
                             </span>
                             <span>{entry.is_dir ? "-" : formatBytes(entry.size ?? null)}</span>
                             <span>{formatDate(entry.modified ?? null)}</span>
@@ -4245,14 +2917,7 @@ export default function App() {
                                 className="action-icon"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  startInlineRename({
-                                    scope: "local",
-                                    name: entry.name,
-                                    path: entry.path,
-                                    isDir: entry.is_dir,
-                                    isImage,
-                                    isVideo,
-                                  });
+                                  openModalForRename("local", { name: entry.name, path: entry.path });
                                 }}
                                 disabled={localPath === "this_pc"}
                                 title="Rename"
@@ -4283,41 +2948,31 @@ export default function App() {
                 ) : filteredLocalEntries.length === 0 ? (
                   <div className="empty-state">No items found.</div>
                 ) : (
-                  <div className={`entries-grid view-${localViewMode}`}>
+                  <div className={`entries-grid view-${viewMode}`}>
                     {filteredLocalEntries.map((entry, index) => {
                       const isSelected = selectedLocal.includes(entry.path);
                       const keys = filteredLocalEntries.map((item) => item.path);
                       const layoutClass =
-                        localViewMode === "list"
+                        viewMode === "list"
                           ? "list"
-                          : localViewMode === "content"
+                          : viewMode === "content"
                             ? "content"
-                            : localViewMode === "tiles"
+                            : viewMode === "tiles"
                               ? "tiles"
                               : "grid";
                       const showMeta =
-                        localViewMode === "list" ||
-                        localViewMode === "tiles" ||
-                        localViewMode === "content";
+                        viewMode === "list" || viewMode === "tiles" || viewMode === "content";
                       const metaText = entry.is_dir
                         ? "Folder"
-                        : localViewMode === "list"
+                        : viewMode === "list"
                           ? formatBytes(entry.size ?? null)
                           : `${formatBytes(entry.size ?? null)} - ${formatDate(entry.modified ?? null)}`;
                       const isImage = !entry.is_dir && isImageFile(entry.name);
                       const isVideo = !entry.is_dir && isVideoFile(entry.name);
-                      const entryIcon = getEntryTypeIcon({
-                        isDir: entry.is_dir,
-                        isImage,
-                        isVideo,
-                      });
                       const isPinned = entry.is_dir
                         ? localBookmarks.some((item) => item.path === entry.path)
                         : false;
-                      const disableLocalActions = localPath === "this_pc";
-                      const isRenaming =
-                        renameState?.scope === "local" && renameState.path === entry.path;
-                      const thumbSize = viewThumbSize(localViewMode);
+                      const thumbSize = viewThumbSize(viewMode);
                       const thumbnailSrc = isImage
                         ? imageCache[toImageKey(entry.path, thumbSize)] ?? ""
                         : "";
@@ -4330,16 +2985,6 @@ export default function App() {
                           className={`entry-card ${layoutClass} ${
                             isSelected ? "selected" : ""
                           }`}
-                          onContextMenu={(event) =>
-                            openContextMenu(event, {
-                              scope: "local",
-                              name: entry.name,
-                              path: entry.path,
-                              isDir: entry.is_dir,
-                              isImage,
-                              isVideo,
-                            })
-                          }
                           draggable={!isTauri}
                           onDragStart={(event) => {
                             const payload: DragPayload = {
@@ -4395,6 +3040,27 @@ export default function App() {
                           role="button"
                           tabIndex={0}
                         >
+                          {entry.is_dir ? (
+                            <Button
+                              className={`entry-pin ${isPinned ? "pinned" : ""}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (!isPremium && !isPinned) {
+                                  addLog("info", "Premium required to save bookmarks.");
+                                  return;
+                                }
+                                if (isPinned) {
+                                  removeLocalBookmark(entry.path);
+                                } else {
+                                  addLocalBookmarks([entry.path]).catch(() => null);
+                                }
+                              }}
+                              disabled={!isPremium && !isPinned}
+                              title={isPinned ? "Unpin" : "Pin"}
+                            >
+                              <IconStar />
+                            </Button>
+                          ) : null}
                           <div
                             className={`entry-icon ${
                               entry.is_dir
@@ -4412,85 +3078,11 @@ export default function App() {
                             {!thumbnailSrc && videoThumbSrc ? (
                               <img src={videoThumbSrc} alt="" className="entry-thumb" />
                             ) : null}
-                            {!thumbnailSrc && !videoThumbSrc ? (
-                              <span className="entry-icon-symbol">{entryIcon}</span>
-                            ) : null}
                             {isVideo ? <span className="entry-play" /> : null}
                           </div>
                           <div className="entry-text">
-                            {isRenaming ? (
-                              <Input
-                                value={renameState?.value ?? ""}
-                                onChange={(event) =>
-                                  setRenameState((prev) =>
-                                    prev ? { ...prev, value: event.target.value } : prev
-                                  )
-                                }
-                                onKeyDown={handleRenameKeyDown}
-                                onClick={(event) => event.stopPropagation()}
-                                onBlur={commitInlineRename}
-                                autoFocus
-                              />
-                            ) : (
-                              <div className="entry-name">{entry.name}</div>
-                            )}
+                            <div className="entry-name">{entry.name}</div>
                             {showMeta ? <div className="entry-meta">{metaText}</div> : null}
-                          </div>
-                          <div className="entry-actions">
-                            {entry.is_dir ? (
-                              <Button
-                                className={`pin-btn ${isPinned ? "pinned" : ""}`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (!isPremium && !isPinned) {
-                                    addLog("info", "Premium required to save bookmarks.");
-                                    return;
-                                  }
-                                  if (isPinned) {
-                                    removeLocalBookmark(entry.path);
-                                  } else {
-                                    addLocalBookmarks([entry.path]).catch(() => null);
-                                  }
-                                }}
-                                disabled={!isPremium && !isPinned}
-                                title={isPinned ? "Unpin" : "Pin"}
-                              >
-                                <IconStar />
-                              </Button>
-                            ) : null}
-                            <Button
-                              className="action-icon"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                startInlineRename({
-                                  scope: "local",
-                                  name: entry.name,
-                                  path: entry.path,
-                                  isDir: entry.is_dir,
-                                  isImage,
-                                  isVideo,
-                                });
-                              }}
-                              disabled={disableLocalActions}
-                              title="Rename"
-                            >
-                              <IconEdit />
-                            </Button>
-                            <Button
-                              className="action-icon danger"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openModalForDelete("local", {
-                                  name: entry.name,
-                                  path: entry.path,
-                                  isDir: entry.is_dir,
-                                });
-                              }}
-                              disabled={disableLocalActions}
-                              title="Delete"
-                            >
-                              <IconTrash />
-                            </Button>
                           </div>
                         </div>
                       );
@@ -4521,6 +3113,9 @@ export default function App() {
                   >
                     Download {"<-"}
                   </Button>
+                </div>
+                <div className="action-hint">
+                  Drag files across panes or use the buttons.
                 </div>
                 <div className="action-status">
                   Queue {queue.length} / Active {queueActive ? 1 : 0}
@@ -4603,7 +3198,7 @@ export default function App() {
                     <div className="pane-sub">FTP Server</div>
                   </div>
                   <div className="pane-actions">
-                    <Button onClick={() => createNewFolder("remote")} disabled={!connected}>
+                    <Button onClick={() => openModalForMkdir("remote")} disabled={!connected}>
                       New folder
                     </Button>
                     <Button onClick={() => refreshRemote()} disabled={!connected}>
@@ -4612,30 +3207,6 @@ export default function App() {
                     <Button className="icon-btn" onClick={jumpRemoteUp} disabled={!connected}>
                       Up
                     </Button>
-                    <Dropdown
-                      variant="bookmark"
-                      layout="field"
-                      label="View"
-                      triggerLabel="View"
-                      value={remoteViewMode}
-                      onChange={(next) => setRemoteViewMode(next as ViewMode)}
-                      renderItemIcon={(option) => getViewModeIcon(option.value as ViewMode)}
-                      renderTriggerIcon={getViewModeIcon(remoteViewMode)}
-                      sections={[
-                        {
-                          options: viewModeOptions.map((item) => ({
-                            value: item.value,
-                            label: item.label,
-                          })),
-                        },
-                      ]}
-                    />
-                    <PaneSortMenu
-                      sortBy={remoteSortBy}
-                      sortOrder={remoteSortOrder}
-                      onSortBy={setRemoteSortBy}
-                      onSortOrder={setRemoteSortOrder}
-                    />
                   </div>
                 </div>
 
@@ -4665,23 +3236,14 @@ export default function App() {
               </div>
 
               <div
-                className={`pane-body view-${remoteViewMode}`}
+                className={`pane-body view-${viewMode}`}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "copy";
                 }}
                 onDrop={handleDropRemote}
-                onContextMenu={(event) => {
-                  if (
-                    (event.target as HTMLElement).closest(".entry-card") ||
-                    (event.target as HTMLElement).closest(".table-row")
-                  ) {
-                    return;
-                  }
-                  openPaneContextMenu(event, "remote");
-                }}
               >
-                {remoteViewMode === "details" ? (
+                {viewMode === "details" ? (
                   <>
                     <Panel variant="highlight" borderWidth={1} className="table-row table-head">
                       <span>Name</span>
@@ -4697,32 +3259,12 @@ export default function App() {
                       filteredRemoteEntries.map((entry, index) => {
                         const isSelected = selectedRemote.includes(entry.name);
                         const keys = filteredRemoteEntries.map((item) => item.name);
-                      const isImage = !entry.is_dir && isImageFile(entry.name);
-                      const isVideo = !entry.is_dir && isVideoFile(entry.name);
-                      const entryIcon = getEntryTypeIcon({
-                        isDir: entry.is_dir,
-                        isImage,
-                        isVideo,
-                      });
-                      const isRenaming =
-                        renameState?.scope === "remote" &&
-                        renameState.path === buildRemotePath(remotePath || "/", entry.name);
-                      return (
+                        return (
                           <Panel
                             key={entry.name}
                             variant="card"
                             borderWidth={1}
                             className={`table-row ${isSelected ? "selected" : ""}`}
-                            onContextMenu={(event) =>
-                              openContextMenu(event, {
-                                scope: "remote",
-                                name: entry.name,
-                                path: buildRemotePath(remotePath || "/", entry.name),
-                                isDir: entry.is_dir,
-                                isImage,
-                                isVideo,
-                              })
-                            }
                             draggable={!isTauri && !entry.is_dir}
                             onDragStart={(event) => {
                               const payload: DragPayload = {
@@ -4774,35 +3316,8 @@ export default function App() {
                             }}
                           >
                             <span className="name-cell">
-                              <span
-                                className={`entry-dot-icon ${
-                                  entry.is_dir
-                                    ? "dir"
-                                    : isImage
-                                      ? "image"
-                                      : isVideo
-                                        ? "video"
-                                        : "file"
-                                }`}
-                              >
-                                {entryIcon}
-                              </span>
-                              {isRenaming ? (
-                                <Input
-                                  value={renameState?.value ?? ""}
-                                  onChange={(event) =>
-                                    setRenameState((prev) =>
-                                      prev ? { ...prev, value: event.target.value } : prev
-                                    )
-                                  }
-                                  onKeyDown={handleRenameKeyDown}
-                                  onClick={(event) => event.stopPropagation()}
-                                  onBlur={commitInlineRename}
-                                  autoFocus
-                                />
-                              ) : (
-                                <span className="name-text">{entry.name}</span>
-                              )}
+                              <span className={`entry-dot ${entry.is_dir ? "dir" : "file"}`} />
+                              <span className="name-text">{entry.name}</span>
                             </span>
                             <span>{entry.is_dir ? "-" : formatBytes(entry.size ?? null)}</span>
                             <span>{formatDate(entry.modified ?? null)}</span>
@@ -4811,13 +3326,9 @@ export default function App() {
                                 className="action-icon"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  startInlineRename({
-                                    scope: "remote",
+                                  openModalForRename("remote", {
                                     name: entry.name,
-                                    path: buildRemotePath(remotePath || "/", entry.name),
-                                    isDir: entry.is_dir,
-                                    isImage,
-                                    isVideo,
+                                    path: entry.name,
                                   });
                                 }}
                                 title="Rename"
@@ -4849,53 +3360,31 @@ export default function App() {
                 ) : filteredRemoteEntries.length === 0 ? (
                   <div className="empty-state">No items found.</div>
                 ) : (
-                  <div className={`entries-grid view-${remoteViewMode}`}>
+                  <div className={`entries-grid view-${viewMode}`}>
                     {filteredRemoteEntries.map((entry, index) => {
                       const isSelected = selectedRemote.includes(entry.name);
                       const keys = filteredRemoteEntries.map((item) => item.name);
                       const layoutClass =
-                        remoteViewMode === "list"
+                        viewMode === "list"
                           ? "list"
-                          : remoteViewMode === "content"
+                          : viewMode === "content"
                             ? "content"
-                            : remoteViewMode === "tiles"
+                            : viewMode === "tiles"
                               ? "tiles"
                               : "grid";
                       const showMeta =
-                        remoteViewMode === "list" ||
-                        remoteViewMode === "tiles" ||
-                        remoteViewMode === "content";
+                        viewMode === "list" || viewMode === "tiles" || viewMode === "content";
                       const metaText = entry.is_dir
                         ? "Folder"
-                        : remoteViewMode === "list"
+                        : viewMode === "list"
                           ? formatBytes(entry.size ?? null)
                           : `${formatBytes(entry.size ?? null)} - ${formatDate(entry.modified ?? null)}`;
-                      const isImage = !entry.is_dir && isImageFile(entry.name);
-                      const isVideo = !entry.is_dir && isVideoFile(entry.name);
-                      const entryIcon = getEntryTypeIcon({
-                        isDir: entry.is_dir,
-                        isImage,
-                        isVideo,
-                      });
-                      const isRenaming =
-                        renameState?.scope === "remote" &&
-                        renameState.path === buildRemotePath(remotePath || "/", entry.name);
                       return (
                         <div
                           key={entry.name}
                           className={`entry-card ${layoutClass} ${
                             isSelected ? "selected" : ""
                           }`}
-                          onContextMenu={(event) =>
-                            openContextMenu(event, {
-                              scope: "remote",
-                              name: entry.name,
-                              path: buildRemotePath(remotePath || "/", entry.name),
-                              isDir: entry.is_dir,
-                              isImage,
-                              isVideo,
-                            })
-                          }
                           draggable={!isTauri && !entry.is_dir}
                           onDragStart={(event) => {
                             const payload: DragPayload = {
@@ -4936,70 +3425,10 @@ export default function App() {
                           role="button"
                           tabIndex={0}
                         >
-                          <div
-                            className={`entry-icon ${
-                              entry.is_dir
-                                ? "dir"
-                                : isImage
-                                  ? "image"
-                                  : isVideo
-                                    ? "video"
-                                    : "file"
-                            }`}
-                          >
-                            <span className="entry-icon-symbol">{entryIcon}</span>
-                          </div>
+                          <div className={`entry-icon ${entry.is_dir ? "dir" : "file"}`} />
                           <div className="entry-text">
-                            {isRenaming ? (
-                              <Input
-                                value={renameState?.value ?? ""}
-                                onChange={(event) =>
-                                  setRenameState((prev) =>
-                                    prev ? { ...prev, value: event.target.value } : prev
-                                  )
-                                }
-                                onKeyDown={handleRenameKeyDown}
-                                onClick={(event) => event.stopPropagation()}
-                                onBlur={commitInlineRename}
-                                autoFocus
-                              />
-                            ) : (
-                              <div className="entry-name">{entry.name}</div>
-                            )}
+                            <div className="entry-name">{entry.name}</div>
                             {showMeta ? <div className="entry-meta">{metaText}</div> : null}
-                          </div>
-                          <div className="entry-actions">
-                            <Button
-                              className="action-icon"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                startInlineRename({
-                                  scope: "remote",
-                                  name: entry.name,
-                                  path: buildRemotePath(remotePath || "/", entry.name),
-                                  isDir: entry.is_dir,
-                                  isImage,
-                                  isVideo,
-                                });
-                              }}
-                              title="Rename"
-                            >
-                              <IconEdit />
-                            </Button>
-                            <Button
-                              className="action-icon danger"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openModalForDelete("remote", {
-                                  name: entry.name,
-                                  path: entry.name,
-                                  isDir: entry.is_dir,
-                                });
-                              }}
-                              title="Delete"
-                            >
-                              <IconTrash />
-                            </Button>
                           </div>
                         </div>
                       );
@@ -5010,624 +3439,176 @@ export default function App() {
             </Panel>
           </section>
 
-          <div
-            className="resize-handle resize-handle--details"
-            role="separator"
-            aria-orientation="vertical"
-            onPointerDown={startResize("details")}
-          />
-
-          <div className="details-stack">
-            <Panel variant="card" borderWidth={1} className="details-pane" ref={detailsRef}>
-              <div className="section-title">Details</div>
-              {detailsItem ? (
-                <div className="details-content">
-                  {detailsItem.scope === "Local" && isImageFile(detailsItem.name) ? (
-                    <div className="details-preview">
-                      {imageCache[toImageKey(detailsItem.path, 512)] ? (
-                        <img src={imageCache[toImageKey(detailsItem.path, 512)]} alt="" />
-                      ) : (
-                        <div className="empty-state">Loading preview...</div>
-                      )}
-                    </div>
-                  ) : null}
-                  {detailsItem.scope === "Local" && isVideoFile(detailsItem.name) ? (
-                    <div className="details-preview video">
-                      {videoPreviewCache[toVideoKey(detailsItem.path, 0)] ? (
-                        <video
-                          src={videoPreviewCache[toVideoKey(detailsItem.path, 0)]}
-                          controls
-                          preload="metadata"
-                          onError={() => {
-                            if (!isTauri) return;
-                            const key = toVideoKey(detailsItem.path, 0);
-                            if (videoPreviewErrors[key]) return;
-                            invoke<string>("read_local_video_data", {
-                              path: detailsItem.path,
-                              maxBytes: maxVideoPreviewBytes,
+          <Panel variant="card" borderWidth={1} className="details-pane">
+            <div className="section-title">Details</div>
+            {detailsItem ? (
+              <div className="details-content">
+                {detailsItem.scope === "Local" && isImageFile(detailsItem.name) ? (
+                  <div className="details-preview">
+                    {imageCache[toImageKey(detailsItem.path, 512)] ? (
+                      <img src={imageCache[toImageKey(detailsItem.path, 512)]} alt="" />
+                    ) : (
+                      <div className="empty-state">Loading preview...</div>
+                    )}
+                  </div>
+                ) : null}
+                {detailsItem.scope === "Local" && isVideoFile(detailsItem.name) ? (
+                  <div className="details-preview video">
+                    {videoPreviewCache[toVideoKey(detailsItem.path, 0)] ? (
+                      <video
+                        src={videoPreviewCache[toVideoKey(detailsItem.path, 0)]}
+                        controls
+                        preload="metadata"
+                        onError={() => {
+                          if (!isTauri) return;
+                          const key = toVideoKey(detailsItem.path, 0);
+                          if (videoPreviewErrors[key]) return;
+                          invoke<string>("read_local_video_data", {
+                            path: detailsItem.path,
+                            maxBytes: maxVideoPreviewBytes,
+                          })
+                            .then((dataUrl) => {
+                              setVideoPreviewCache((prev) => ({
+                                ...prev,
+                                [key]: dataUrl,
+                              }));
                             })
-                              .then((dataUrl) => {
-                                setVideoPreviewCache((prev) => ({
-                                  ...prev,
-                                  [key]: dataUrl,
-                                }));
-                              })
-                              .catch((error) => {
-                                const message =
-                                  error instanceof Error ? error.message : String(error);
-                                setVideoPreviewErrors((prev) => ({
-                                  ...prev,
-                                  [key]: message,
-                                }));
-                              });
-                          }}
-                        />
-                      ) : videoPreviewErrors[toVideoKey(detailsItem.path, 0)] === "too_large" ? (
-                        <div className="empty-state">
-                          Video too large for preview (over {Math.round(maxVideoPreviewBytes / 1_000_000)}MB).
-                        </div>
-                      ) : videoPreviewErrors[toVideoKey(detailsItem.path, 0)] ? (
-                        <div className="empty-state">Video preview unavailable.</div>
-                      ) : (
-                        <div className="empty-state">Loading preview...</div>
-                      )}
-                    </div>
-                  ) : null}
-                  <div className="details-name">{detailsItem.name}</div>
-                  <div className="details-scope">{detailsItem.scope}</div>
-                  <div className="details-row">
-                    <span>Type</span>
-                    <span>{detailsItem.isDir ? "Folder" : "File"}</span>
+                            .catch((error) => {
+                              const message =
+                                error instanceof Error ? error.message : String(error);
+                              setVideoPreviewErrors((prev) => ({
+                                ...prev,
+                                [key]: message,
+                              }));
+                            });
+                        }}
+                      />
+                    ) : videoPreviewErrors[toVideoKey(detailsItem.path, 0)] === "too_large" ? (
+                      <div className="empty-state">
+                        Video too large for preview (over {Math.round(maxVideoPreviewBytes / 1_000_000)}MB).
+                      </div>
+                    ) : videoPreviewErrors[toVideoKey(detailsItem.path, 0)] ? (
+                      <div className="empty-state">Video preview unavailable.</div>
+                    ) : (
+                      <div className="empty-state">Loading preview...</div>
+                    )}
                   </div>
+                ) : null}
+                <div className="details-name">{detailsItem.name}</div>
+                <div className="details-scope">{detailsItem.scope}</div>
+                <div className="details-row">
+                  <span>Type</span>
+                  <span>{detailsItem.isDir ? "Folder" : "File"}</span>
+                </div>
+                <div className="details-row">
+                  <span>Size</span>
+                  <span>{detailsItem.isDir ? "-" : formatBytes(detailsItem.size)}</span>
+                </div>
+                <div className="details-row">
+                  <span>Modified</span>
+                  <span>{formatDate(detailsItem.modified)}</span>
+                </div>
+                {detailsItem.created ? (
                   <div className="details-row">
-                    <span>Size</span>
-                    <span>{detailsItem.isDir ? "-" : formatBytes(detailsItem.size)}</span>
+                    <span>Created</span>
+                    <span>{formatDate(detailsItem.created)}</span>
                   </div>
+                ) : null}
+                {detailsItem.taken ? (
                   <div className="details-row">
-                    <span>Modified</span>
-                    <span>{formatDate(detailsItem.modified)}</span>
+                    <span>Date taken</span>
+                    <span>{formatDate(detailsItem.taken)}</span>
                   </div>
-                  {detailsItem.created ? (
-                    <div className="details-row">
-                      <span>Created</span>
-                      <span>{formatDate(detailsItem.created)}</span>
-                    </div>
-                  ) : null}
-                  {detailsItem.taken ? (
-                    <div className="details-row">
-                      <span>Date taken</span>
-                      <span>{formatDate(detailsItem.taken)}</span>
-                    </div>
-                  ) : null}
-                  {detailsItem.dimensions ? (
-                    <div className="details-row">
-                      <span>Dimensions</span>
-                      <span>
-                        {detailsItem.dimensions.width} x {detailsItem.dimensions.height}
-                      </span>
-                    </div>
-                  ) : null}
-                  {detailsItem.rating ? (
-                    <div className="details-row">
-                      <span>Rating</span>
-                      <span>{detailsItem.rating}</span>
-                    </div>
-                  ) : null}
-                  {detailsItem.tags?.length ? (
-                    <div className="details-row">
-                      <span>Tags</span>
-                      <span>{detailsItem.tags.join(", ")}</span>
-                    </div>
-                  ) : null}
+                ) : null}
+                {detailsItem.dimensions ? (
                   <div className="details-row">
-                    <span>Path</span>
-                    <span className="details-path">
-                      {!isTauri && detailsItem.scope === "Local"
-                        ? detailsItem.name
-                        : detailsItem.path}
+                    <span>Dimensions</span>
+                    <span>
+                      {detailsItem.dimensions.width} x {detailsItem.dimensions.height}
                     </span>
                   </div>
+                ) : null}
+                {detailsItem.rating ? (
+                  <div className="details-row">
+                    <span>Rating</span>
+                    <span>{detailsItem.rating}</span>
+                  </div>
+                ) : null}
+                {detailsItem.tags?.length ? (
+                  <div className="details-row">
+                    <span>Tags</span>
+                    <span>{detailsItem.tags.join(", ")}</span>
+                  </div>
+                ) : null}
+                <div className="details-row">
+                  <span>Path</span>
+                  <span className="details-path">
+                    {!isTauri && detailsItem.scope === "Local"
+                      ? detailsItem.name
+                      : detailsItem.path}
+                  </span>
                 </div>
-              ) : (
-                <div className="empty-state">Select an item to see details.</div>
-              )}
-            </Panel>
-
-            <Panel variant="card" borderWidth={1} className="activity-card activity-pane">
-              <div className="section-title">Activity</div>
-              {logs.length === 0 ? (
-                <div className="empty-state">Actions will appear here.</div>
-              ) : (
-                <div className="log-list">
-                  {logs.map((entry, index) => (
-                    <div key={`${entry.timestamp}-${index}`} className={`log-row ${entry.level}`}>
-                      <span className="log-time">
-                        {new Date(entry.timestamp).toLocaleTimeString()}
-                      </span>
-                      <span className="log-msg">{entry.message}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          </div>
+              </div>
+            ) : (
+              <div className="empty-state">Select an item to see details.</div>
+            )}
+          </Panel>
         </section>
       </main>
-      <div
-        className="resize-handle resize-handle--horizontal"
-        role="separator"
-        aria-orientation="horizontal"
-        onPointerDown={startResizeVertical}
-      />
 
+      <Panel variant="card" borderWidth={1} className="activity-card activity-wide">
+        <div className="section-title">Activity</div>
+        {logs.length === 0 ? (
+          <div className="empty-state">Actions will appear here.</div>
+        ) : (
+          <div className="log-list">
+            {logs.map((entry, index) => (
+              <div key={`${entry.timestamp}-${index}`} className={`log-row ${entry.level}`}>
+                <span className="log-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                <span className="log-msg">{entry.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
 
       {modal && modal.type !== "prefs" && (
-        <Modal
-          isOpen={true}
-          onClose={closeModal}
-          title={
-            modal.type === "delete"
-              ? `Delete ${modal.scope} item`
-              : "Save connection bookmark"
-          }
-        >
-          {modal.type === "ftp-bookmark" && (
-            <Input
-              autoFocus
-              value={modalValue}
-              onChange={(event) => setModalValue(event.target.value)}
-              placeholder="Enter a name"
-            />
-          )}
-          {modal.type === "delete" && (
-            <p>
-              Delete <strong>{modal.targetName}</strong>? This cannot be undone.
-            </p>
-          )}
-          <div className="modal-actions">
-            <Button variant="ghost" type="button" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant={modal.type === "delete" ? "delete" : "primary"}
-              onClick={confirmModal}
-            >
-              {modal.type === "delete" ? "Delete" : "Confirm"}
-            </Button>
-          </div>
-        </Modal>
-      )}
-
-      {contextMenu ? (
-        <Modal isOpen={true} onClose={closeContextMenu} title="" className="context-menu">
-          {contextMenu.kind === "pane" ? (
-            <SideMenu resetKey={contextMenuResetKey}>
-              <div className="context-menu-list">
-                <SideMenuSubmenu
-                  id="pane-view"
-                  className="context-menu-submenu"
-                  panelClassName="context-menu-submenu-panel"
-                  enableViewportFlip
-                  trigger={(triggerProps) => (
-                    <button
-                      className="context-menu-item is-submenu"
-                      type="button"
-                      onClick={triggerProps.onClick}
-                      aria-expanded={triggerProps["aria-expanded"]}
-                      disabled={triggerProps.disabled}
-                    >
-                      <span className="context-menu-icon">
-                        {contextViewMode ? getViewModeIcon(contextViewMode) : <FiEye />}
-                      </span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>View</span>
-                      <span className="context-menu-trailing"><FiChevronRight /></span>
-                    </button>
-                  )}
-                >
-                  {viewModeOptions.map((item) => (
-                    <button
-                      key={item.value}
-                      className={[
-                        "context-menu-item",
-                        contextViewMode === item.value ? "active" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      type="button"
-                      onClick={() => {
-                        if (contextScope === "local") {
-                          setLocalViewMode(item.value as ViewMode);
-                        } else if (contextScope === "remote") {
-                          setRemoteViewMode(item.value as ViewMode);
-                        }
-                        closeContextMenu();
-                      }}
-                    >
-                      <span className="context-menu-icon">{getViewModeIcon(item.value as ViewMode)}</span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>{item.label}</span>
-                    </button>
-                  ))}
-                </SideMenuSubmenu>
-                <SideMenuSubmenu
-                  id="pane-sort"
-                  className="context-menu-submenu"
-                  panelClassName="context-menu-submenu-panel"
-                  enableViewportFlip
-                  onOpenChange={setContextPaneSortOpen}
-                  trigger={(triggerProps) => (
-                    <button
-                      className="context-menu-item is-submenu"
-                      type="button"
-                      onClick={triggerProps.onClick}
-                      aria-expanded={triggerProps["aria-expanded"]}
-                      disabled={triggerProps.disabled}
-                    >
-                      <span className="context-menu-icon"><FiArrowDown /></span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Sort by</span>
-                      <span className="context-menu-trailing"><FiChevronRight /></span>
-                    </button>
-                  )}
-                >
-                  <SideMenu resetKey={`${contextMenuResetKey}-sort-${contextPaneSortOpen ? "open" : "closed"}`}>
-                    {sortPrimaryOptions.map((item) => (
-                      <button
-                        key={item.value}
-                        className="context-menu-item"
-                        type="button"
-                        onClick={() => {
-                          applyContextSortBy(item.value);
-                          closeContextMenu();
-                        }}
-                      >
-                      <span className="context-menu-icon sort-icon">{getSortByIcon(item.value)}</span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>{item.label}</span>
-                    </button>
-                  ))}
-                    <div className="context-menu-separator" role="separator" />
-                    <SideMenuSubmenu
-                      id="pane-sort-more"
-                      className="context-menu-submenu"
-                      panelClassName="context-menu-submenu-panel"
-                      enableViewportFlip
-                      trigger={(triggerProps) => (
-                        <button
-                          className="context-menu-item is-submenu"
-                          type="button"
-                          onClick={triggerProps.onClick}
-                          aria-expanded={triggerProps["aria-expanded"]}
-                          disabled={triggerProps.disabled}
-                        >
-                          <span className="context-menu-icon">{getSortByIcon("size")}</span>
-                          <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>More</span>
-                          <span className="context-menu-trailing"><FiChevronRight /></span>
-                        </button>
-                      )}
-                    >
-                      {sortMoreOptions.map((item) => (
-                        <button
-                          key={item.value}
-                        className="context-menu-item"
-                        type="button"
-                        onClick={() => {
-                          applyContextSortBy(item.value);
-                          closeContextMenu();
-                        }}
-                      >
-                          <span className="context-menu-icon sort-icon">{getSortByIcon(item.value)}</span>
-                          <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>{item.label}</span>
-                        </button>
-                      ))}
-                    </SideMenuSubmenu>
-                    <SideMenuSubmenu
-                      id="pane-sort-order"
-                      className="context-menu-submenu"
-                      panelClassName="context-menu-submenu-panel"
-                      enableViewportFlip
-                      trigger={(triggerProps) => (
-                        <button
-                          className="context-menu-item is-submenu"
-                          type="button"
-                          onClick={triggerProps.onClick}
-                          aria-expanded={triggerProps["aria-expanded"]}
-                          disabled={triggerProps.disabled}
-                        >
-                          <span className="context-menu-icon">{getSortOrderIcon("asc")}</span>
-                          <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Order</span>
-                          <span className="context-menu-trailing"><FiChevronRight /></span>
-                        </button>
-                      )}
-                    >
-                      {sortOrderOptions.map((item) => (
-                        <button
-                          key={item.value}
-                        className="context-menu-item"
-                        type="button"
-                        onClick={() => {
-                          applyContextSortOrder(item.value);
-                          closeContextMenu();
-                        }}
-                      >
-                          <span className="context-menu-icon sort-icon">{getSortOrderIcon(item.value)}</span>
-                          <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>{item.label}</span>
-                        </button>
-                      ))}
-                    </SideMenuSubmenu>
-                  </SideMenu>
-                </SideMenuSubmenu>
-                <div className="context-menu-separator" role="separator" />
-                <div className="context-menu-inline">
-                  <button
-                    className="context-menu-item inline"
-                    type="button"
-                    disabled={!contextCanUndo}
-                    onClick={undoLast}
-                  >
-                    <span className="context-menu-icon"><FiCornerUpLeft /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Undo</span>
-                  </button>
-                  <button
-                    className="context-menu-item inline"
-                    type="button"
-                    disabled={!contextCanRedo}
-                    onClick={redoLast}
-                  >
-                    <span className="context-menu-icon"><FiCornerUpRight /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Redo</span>
-                  </button>
-                </div>
-                <SideMenuSubmenu
-                  id="pane-new"
-                  className="context-menu-submenu"
-                  panelClassName="context-menu-submenu-panel"
-                  enableViewportFlip
-                  disabled={!contextCanCreate}
-                  trigger={(triggerProps) => (
-                    <button
-                      className="context-menu-item is-submenu"
-                      type="button"
-                      onClick={triggerProps.onClick}
-                      aria-expanded={triggerProps["aria-expanded"]}
-                      disabled={triggerProps.disabled}
-                    >
-                      <span className="context-menu-icon"><FiPlus /></span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>New</span>
-                      <span className="context-menu-trailing"><FiChevronRight /></span>
-                    </button>
-                  )}
-                >
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    disabled={!contextCanCreate}
-                    onClick={handleContextNewFolder}
-                  >
-                    <span className="context-menu-icon"><FiFolder /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Folder</span>
-                  </button>
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    disabled={!contextCanCreate}
-                    onClick={handleContextNewTextFile}
-                  >
-                    <span className="context-menu-icon"><FiFileText /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Text document</span>
-                  </button>
-                </SideMenuSubmenu>
-                {contextCanPaste ? (
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    onClick={handleContextPaste}
-                  >
-                    <span className="context-menu-icon"><FiCopy /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Paste</span>
-                  </button>
-                ) : null}
-                <div className="context-menu-separator" role="separator" />
-                <button
-                  className="context-menu-item"
-                  type="button"
-                  disabled={contextScope !== "local"}
-                  onClick={() => {
-                    if (contextScope !== "local") return;
-                    closeContextMenu();
-                    if (!isTauri) {
-                      addLog("error", "Properties are only available in the desktop app.");
-                      return;
-                    }
-                    if (!localPath || localPath === "this_pc") {
-                      addLog("error", "Select a folder to view properties.");
-                      return;
-                    }
-                    invoke("open_properties", { path: localPath }).catch((error) => {
-                      const message = error instanceof Error ? error.message : String(error);
-                      addLog("error", message);
-                    });
-                  }}
-                >
-                  <span className="context-menu-icon"><FiInfo /></span>
-                  <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Properties</span>
-                  <span className="context-menu-shortcut">Alt+Enter</span>
-                </button>
-              </div>
-            </SideMenu>
-          ) : (
-            <SideMenu resetKey={contextMenuResetKey}>
-              <div className="context-menu-toolbar">
-                <button
-                  className="context-menu-tool"
-                  type="button"
-                  disabled={contextDisableLocalActions}
-                  onClick={handleContextCut}
-                >
-                  <FiScissors />
-                  <span>Cut</span>
-                </button>
-                <button
-                  className="context-menu-tool"
-                  type="button"
-                  disabled={contextDisableLocalActions}
-                  onClick={handleContextCopy}
-                >
-                  <FiCopy />
-                  <span>Copy</span>
-                </button>
-                <button
-                  className="context-menu-tool"
-                  type="button"
-                  disabled={contextDisableLocalActions}
-                  onClick={handleContextRename}
-                >
-                  <IconEdit />
-                  <span>Rename</span>
-                </button>
-                <button
-                  className="context-menu-tool danger"
-                  type="button"
-                  disabled={contextDisableLocalActions}
-                  onClick={handleContextDelete}
-                >
-                  <IconTrash />
-                  <span>Delete</span>
-                </button>
-              </div>
-              <div className="context-menu-list">
-                <button
-                  className="context-menu-item"
-                  type="button"
-                  disabled={!contextCanOpen}
-                  onClick={handleContextOpen}
-                >
-                  <span className="context-menu-icon">
-                    {contextEntry
-                      ? getEntryTypeIcon({
-                          isDir: contextEntry.isDir,
-                          isImage: contextEntry.isImage,
-                          isVideo: contextEntry.isVideo,
-                        })
-                      : null}
-                  </span>
-                  <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Open</span>
-                  <span className="context-menu-shortcut">Enter</span>
-                </button>
-                <SideMenuSubmenu
-                  id="entry-open-with"
-                  className="context-menu-submenu"
-                  panelClassName="context-menu-submenu-panel"
-                  enableViewportFlip
-                  disabled={contextEntry?.isDir || contextEntry?.scope !== "local"}
-                  trigger={(triggerProps) => (
-                    <button
-                      className="context-menu-item is-submenu"
-                      type="button"
-                      onClick={triggerProps.onClick}
-                      aria-expanded={triggerProps["aria-expanded"]}
-                      disabled={triggerProps.disabled}
-                    >
-                      <span className="context-menu-icon"><FiCopy /></span>
-                      <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Open with</span>
-                      <span className="context-menu-trailing"><FiChevronRight /></span>
-                    </button>
-                  )}
-                >
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    disabled={!contextCanOpen}
-                    onClick={handleContextOpen}
-                  >
-                    <span className="context-menu-icon"><FiCopy /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Default app</span>
-                  </button>
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    onClick={handleContextOpenWith}
-                  >
-                    <span className="context-menu-icon"><FiCopy /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Choose app...</span>
-                  </button>
-                </SideMenuSubmenu>
-                {contextEntry?.isDir ? (
-                  <button
-                    className="context-menu-item"
-                    type="button"
-                    disabled={contextDisableLocalActions || contextEntry.scope !== "local"}
-                    onClick={() => {
-                      if (!contextEntry || contextEntry.scope !== "local") return;
-                      closeContextMenu();
-                      if (!isPremium) {
-                        addLog("info", "Premium required to save bookmarks.");
-                        return;
-                      }
-                      const exists = localBookmarks.some((item) => item.path === contextEntry.path);
-                      if (exists) {
-                        removeLocalBookmark(contextEntry.path);
-                      } else {
-                        addLocalBookmarks([contextEntry.path]).catch(() => null);
-                      }
-                    }}
-                  >
-                    <span className="context-menu-icon"><IconStar /></span>
-                    <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>
-                      {localBookmarks.some((item) => item.path === contextEntry?.path)
-                        ? "Remove bookmark"
-                        : "Bookmark"}
-                    </span>
-                  </button>
-                ) : null}
-                <button className="context-menu-item is-submenu" type="button" disabled>
-                  <span className="context-menu-icon"><FiPlus /></span>
-                  <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Compress to...</span>
-                  <span className="context-menu-trailing"><FiChevronRight /></span>
-                </button>
-                <button
-                  className="context-menu-item"
-                  type="button"
-                  onClick={handleContextCopyPath}
-                >
-                  <span className="context-menu-icon"><FiCopy /></span>
-                  <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Copy as path</span>
-                  <span className="context-menu-shortcut">Ctrl+Shift+C</span>
-                </button>
-                <button
-                  className="context-menu-item"
-                  type="button"
-                  onClick={handleContextProperties}
-                >
-                  <span className="context-menu-icon"><FiInfo /></span>
-                  <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Properties</span>
-                  <span className="context-menu-shortcut">Alt+Enter</span>
-                </button>
-              </div>
-            </SideMenu>
-          )}
-        </Modal>
-      ) : null}
-
-      {previewState ? (
-        <Modal
-          isOpen={true}
-          onClose={() => setPreviewState(null)}
-          title={previewState.name}
-          size="wide"
-          className="preview-modal"
-        >
-          <div className="preview-body">
-            {previewSrc ? (
-              previewState.isVideo ? (
-                <video src={previewSrc} controls preload="metadata" />
-              ) : (
-                <img src={previewSrc} alt={previewState.name} />
-              )
-            ) : (
-              <div className="empty-state">Preview unavailable.</div>
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-title">
+              {modal.type === "mkdir" && `New ${modal.scope} folder`}
+              {modal.type === "rename" && `Rename ${modal.scope} item`}
+              {modal.type === "delete" && `Delete ${modal.scope} item`}
+              {modal.type === "ftp-bookmark" && "Save connection bookmark"}
+            </div>
+            {modal.type !== "delete" && (
+              <Input
+                autoFocus
+                value={modalValue}
+                onChange={(event) => setModalValue(event.target.value)}
+                placeholder="Enter a name"
+              />
             )}
+            {modal.type === "delete" && (
+              <p>
+                Delete <strong>{modal.targetName}</strong>? This cannot be undone.
+              </p>
+            )}
+            <div className="modal-actions">
+              <Button variant="ghost" type="button" onClick={closeModal}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant={modal.type === "delete" ? "delete" : "primary"}
+                onClick={confirmModal}
+              >
+                {modal.type === "delete" ? "Delete" : "Confirm"}
+              </Button>
+            </div>
           </div>
-        </Modal>
-      ) : null}
+        </div>
+      )}
 
       <PreferencesModal
         isOpen={modal?.type === "prefs"}
@@ -5684,7 +3665,6 @@ export default function App() {
     </div>
   );
 }
-
 
 
 
