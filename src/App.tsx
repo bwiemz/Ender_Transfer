@@ -1348,6 +1348,121 @@ export default function App() {
     };
   }, [contextMenu]);
 
+  /* ── Global keyboard shortcuts ── */
+  useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      // Skip when user is typing in an input / textarea / contentEditable
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      // Skip when a modal or context menu is open
+      if (contextMenu) return;
+
+      // Delete – delete selected item
+      if (e.key === "Delete") {
+        e.preventDefault();
+        openActiveDelete();
+        return;
+      }
+      // F2 – rename selected item
+      if (e.key === "F2") {
+        e.preventDefault();
+        openActiveRename();
+        return;
+      }
+      // Ctrl+Z – undo
+      if (e.ctrlKey && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        undoLast();
+        return;
+      }
+      // Ctrl+Y – redo
+      if (e.ctrlKey && e.key === "y") {
+        e.preventDefault();
+        redoLast();
+        return;
+      }
+      // Ctrl+Shift+C – copy path
+      if (e.ctrlKey && e.shiftKey && e.key === "C") {
+        e.preventDefault();
+        (async () => {
+          let value = "";
+          if (activePane === "local") {
+            value = selectedLocal[0] ?? localPath;
+          } else {
+            const sel = selectedRemote[0];
+            value = sel ? buildRemotePath(remotePath || "/", sel) : remotePath || "/";
+          }
+          if (!value) return;
+          try {
+            await navigator.clipboard.writeText(value);
+            addLog("info", "Path copied to clipboard.");
+          } catch {
+            addLog("error", "Unable to copy path.");
+          }
+        })();
+        return;
+      }
+      // Ctrl+A – select all in active pane
+      if (e.ctrlKey && e.key === "a") {
+        e.preventDefault();
+        if (activePane === "local") {
+          setSelectedLocal(localEntries.map((item) => item.path));
+        } else {
+          setSelectedRemote(remoteEntries.map((item) => item.name));
+        }
+        return;
+      }
+      // Alt+Enter – properties (local only, Tauri only)
+      if (e.altKey && e.key === "Enter") {
+        e.preventDefault();
+        if (activePane === "local" && isTauri) {
+          const target = selectedLocal[0] ?? localPath;
+          if (target && target !== "this_pc") {
+            invoke("open_properties", { path: target }).catch((error) => {
+              const message = error instanceof Error ? error.message : String(error);
+              addLog("error", message);
+            });
+          }
+        }
+        return;
+      }
+      // Enter – open selected item
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (activePane === "local") {
+          const target = selectedLocal[0];
+          const entry = localEntries.find((item) => item.path === target);
+          if (entry) {
+            openEntry({
+              scope: "local",
+              name: entry.name,
+              path: entry.path,
+              isDir: entry.is_dir,
+              isImage: !entry.is_dir && isImageFile(entry.name),
+              isVideo: !entry.is_dir && isVideoFile(entry.name),
+            });
+          }
+        } else {
+          const target = selectedRemote[0];
+          const entry = remoteEntries.find((item) => item.name === target);
+          if (entry) {
+            openEntry({
+              scope: "remote",
+              name: entry.name,
+              path: buildRemotePath(remotePath || "/", entry.name),
+              isDir: entry.is_dir,
+              isImage: !entry.is_dir && isImageFile(entry.name),
+              isVideo: !entry.is_dir && isVideoFile(entry.name),
+            });
+          }
+        }
+        return;
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => window.removeEventListener("keydown", handleGlobalKey);
+  });
+
   const displayName =
     launchToken?.displayName || launchToken?.email?.split("@")[0] || "Account";
   const rawAvatarUrl = launchToken?.avatarUrl ?? null;
@@ -1505,11 +1620,14 @@ export default function App() {
     ]);
   };
 
-  const handleContextOpen = () => {
-    if (!contextMenu) return;
-    if (contextMenu.kind !== "entry") return;
-    const { entry } = contextMenu;
-    closeContextMenu();
+  const openEntry = (entry: {
+    scope: "local" | "remote";
+    name: string;
+    path: string;
+    isDir: boolean;
+    isImage: boolean;
+    isVideo: boolean;
+  }) => {
     if (entry.isDir) {
       if (entry.scope === "local") {
         refreshLocal(entry.path);
@@ -1540,6 +1658,14 @@ export default function App() {
       return;
     }
     enqueueDownloadNames([entry.name]).catch(() => null);
+  };
+
+  const handleContextOpen = () => {
+    if (!contextMenu) return;
+    if (contextMenu.kind !== "entry") return;
+    const { entry } = contextMenu;
+    closeContextMenu();
+    openEntry(entry);
   };
 
   const handleContextRename = () => {
@@ -1770,7 +1896,7 @@ export default function App() {
                 form.append("password", password);
                 form.append("protocol", protocol);
                 form.append("sftpPort", String(sftpPort));
-                form.append("path", target);
+                form.append("remotePath", target);
                 form.append("file", blob, entry.name);
                 const response = await fetch(`${apiBase}/api/ftp/upload`, {
                   method: "POST",
@@ -1969,7 +2095,7 @@ export default function App() {
     }
   };
 
-  const enqueueUploadPaths = (paths: string[]) => {
+  const enqueueUploadPaths = async (paths: string[]) => {
     if (!connected) {
       addLog("error", "Connect to a server first.");
       return;
@@ -1978,12 +2104,58 @@ export default function App() {
     const items: TransferItem[] = [];
     let blocked = 0;
 
-    paths.forEach((path) => {
+    for (const path of paths) {
       const entry = entryMap.get(path);
-      if (!entry || entry.is_dir) return;
+      if (!entry) continue;
+
+      // Handle directory uploads recursively (Tauri only)
+      if (entry.is_dir) {
+        if (!isTauri) {
+          addLog("info", `Folder upload "${entry.name}" is only supported in the desktop app.`);
+          continue;
+        }
+        try {
+          const children: { relative_path: string; is_dir: boolean; size: number | null }[] =
+            await invoke("list_local_files_recursive", { root: entry.path });
+          const baseRemote = buildRemotePath(remotePath || "/", entry.name);
+          // Create the root remote directory
+          try { await invoke("create_dir", { path: baseRemote }); } catch { /* may exist */ }
+          // Create remote subdirectories
+          for (const child of children) {
+            if (child.is_dir) {
+              try {
+                await invoke("create_dir", { path: buildRemotePath(baseRemote, child.relative_path) });
+              } catch {
+                // Directory may already exist
+              }
+            }
+          }
+          // Enqueue files
+          for (const child of children) {
+            if (!child.is_dir) {
+              items.push({
+                id: createId(),
+                direction: "upload",
+                name: child.relative_path.split("/").pop() || child.relative_path,
+                localPath: entry.path + "\\" + child.relative_path.replace(/\//g, "\\"),
+                remotePath: buildRemotePath(baseRemote, child.relative_path),
+                status: "queued",
+                transferred: 0,
+                total: child.size ?? null,
+                file: null,
+              });
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          addLog("error", `Failed to list folder "${entry.name}": ${message}`);
+        }
+        continue;
+      }
+
       if (!isPremium && !isTauri && (entry.size ?? 0) > freeUploadLimitBytes) {
         blocked += 1;
-        return;
+        continue;
       }
       const remoteTarget = buildRemotePath(remotePath || "/", entry.name);
       items.push({
@@ -1997,7 +2169,7 @@ export default function App() {
         total: entry.size ?? null,
         file: entry.file ?? null,
       });
-    });
+    }
 
     if (!items.length) {
       addLog("error", "Select local files to upload.");
@@ -2020,9 +2192,62 @@ export default function App() {
       return;
     }
     const items: TransferItem[] = [];
-    names.forEach((name) => {
+
+    for (const name of names) {
       const entry = remoteEntries.find((item) => item.name === name);
-      if (!entry || entry.is_dir) return;
+      if (!entry) continue;
+
+      // Handle directory downloads recursively (Tauri only)
+      if (entry.is_dir) {
+        if (!isTauri) {
+          addLog("info", `Folder download "${entry.name}" is only supported in the desktop app.`);
+          continue;
+        }
+        if (!localPath || localPath === "this_pc") {
+          addLog("error", "Pick a local folder first.");
+          continue;
+        }
+        try {
+          const fullRemote = buildRemotePath(remotePath || "/", entry.name);
+          const children: { relative_path: string; is_dir: boolean; size: number | null }[] =
+            await invoke("list_remote_files_recursive", { path: fullRemote });
+          const baseLocal = await join(localPath, entry.name);
+          // Create local directories first (including the root folder)
+          try { await invoke("create_local_dir", { path: baseLocal }); } catch { /* may exist */ }
+          for (const child of children) {
+            if (child.is_dir) {
+              try {
+                const dirPath = await join(baseLocal, ...child.relative_path.split("/"));
+                await invoke("create_local_dir", { path: dirPath });
+              } catch {
+                // Directory may already exist
+              }
+            }
+          }
+          // Enqueue files
+          for (const child of children) {
+            if (!child.is_dir) {
+              const fileName = child.relative_path.split("/").pop() || child.relative_path;
+              const childLocalPath = await join(baseLocal, ...child.relative_path.split("/"));
+              items.push({
+                id: createId(),
+                direction: "download",
+                name: fileName,
+                localPath: childLocalPath,
+                remotePath: buildRemotePath(fullRemote, child.relative_path),
+                status: "queued",
+                transferred: 0,
+                total: child.size ?? null,
+              });
+            }
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          addLog("error", `Failed to list remote folder "${entry.name}": ${message}`);
+        }
+        continue;
+      }
+
       items.push({
         id: createId(),
         direction: "download",
@@ -2033,7 +2258,7 @@ export default function App() {
         transferred: 0,
         total: entry.size ?? null,
       });
-    });
+    }
 
     if (!items.length) {
       addLog("error", "Select remote files to download.");
@@ -2051,10 +2276,16 @@ export default function App() {
     }
 
     const queued = await Promise.all(
-      items.map(async (item) => ({
-        ...item,
-        localPath: await join(item.localPath, item.name),
-      }))
+      items.map(async (item) => {
+        // For items from recursive folder listing, localPath is already a full path
+        if (item.localPath !== localPath && item.localPath !== "browser") {
+          return item;
+        }
+        return {
+          ...item,
+          localPath: await join(item.localPath, item.name),
+        };
+      })
     );
 
     setQueue((prev) => [...prev, ...queued]);
@@ -2484,6 +2715,34 @@ export default function App() {
     startTransfer();
   }, [activeTransferId, queue, host, port, username, password]);
 
+  /* ── Transfer queue management ── */
+  const clearCompletedTransfers = () => {
+    setQueue((prev) => prev.filter((item) => item.status !== "done"));
+  };
+
+  const cancelQueuedTransfers = () => {
+    setQueue((prev) => prev.filter((item) => item.status !== "queued"));
+  };
+
+  const retryFailedTransfers = () => {
+    setQueue((prev) =>
+      prev.map((item) =>
+        item.status === "error"
+          ? { ...item, status: "queued" as TransferStatus, transferred: 0, message: null }
+          : item
+      )
+    );
+  };
+
+  const clearAllTransfers = () => {
+    if (queueActive) {
+      // Keep only the currently active transfer
+      setQueue((prev) => prev.filter((item) => item.status === "active"));
+    } else {
+      setQueue([]);
+    }
+  };
+
   const handleConnect = async () => {
     if (isTauri && protocol === "sftp") {
       addLog("error", "SFTP is available in the web app only.");
@@ -2555,6 +2814,15 @@ export default function App() {
     setUsername(selected.username);
     setPassword(selected.password ?? "");
     setSavePassword(Boolean(selected.password));
+  };
+
+  const deleteFtpBookmark = (name: string) => {
+    const next = ftpBookmarks.filter((item) => item.name !== name);
+    setFtpBookmarks(next);
+    saveFtpBookmarks(next);
+    if (selectedFtpBookmark === name) {
+      setSelectedFtpBookmark("");
+    }
   };
 
   const openFtpBookmarkModal = () => {
@@ -2851,7 +3119,7 @@ export default function App() {
       form.append("password", password);
       form.append("protocol", protocol);
       form.append("sftpPort", String(sftpPort));
-      form.append("path", path);
+      form.append("remotePath", path);
       form.append("file", blob, name);
       const response = await fetch(`${apiBase}/api/ftp/upload`, {
         method: "POST",
@@ -3822,6 +4090,13 @@ export default function App() {
                 >
                   Save Bookmark
                 </Button>
+                <Button
+                  onClick={() => deleteFtpBookmark(selectedFtpBookmark)}
+                  disabled={!selectedFtpBookmark}
+                  title="Delete selected bookmark"
+                >
+                  Delete Bookmark
+                </Button>
               </div>
               <div className={`status-pill ${connected ? "online" : "offline"}`}>
                 {connected ? "Connected" : "Disconnected"}
@@ -4174,15 +4449,27 @@ export default function App() {
                               );
                             }}
                             onDoubleClick={() =>
-                              entry.is_dir ? refreshLocal(entry.path) : null
+                              openEntry({
+                                scope: "local",
+                                name: entry.name,
+                                path: entry.path,
+                                isDir: entry.is_dir,
+                                isImage: isImage,
+                                isVideo: isVideo,
+                              })
                             }
                             role="button"
                             tabIndex={0}
                             onKeyDown={(event) => {
                               if (event.key === "Enter") {
-                                if (entry.is_dir) {
-                                  refreshLocal(entry.path);
-                                }
+                                openEntry({
+                                  scope: "local",
+                                  name: entry.name,
+                                  path: entry.path,
+                                  isDir: entry.is_dir,
+                                  isImage: isImage,
+                                  isVideo: isVideo,
+                                });
                               }
                             }}
                           >
@@ -4390,7 +4677,14 @@ export default function App() {
                             );
                           }}
                           onDoubleClick={() =>
-                            entry.is_dir ? refreshLocal(entry.path) : null
+                            openEntry({
+                              scope: "local",
+                              name: entry.name,
+                              path: entry.path,
+                              isDir: entry.is_dir,
+                              isImage: isImage,
+                              isVideo: isVideo,
+                            })
                           }
                           role="button"
                           tabIndex={0}
@@ -4523,7 +4817,29 @@ export default function App() {
                   </Button>
                 </div>
                 <div className="action-status">
-                  Queue {queue.length} / Active {queueActive ? 1 : 0}
+                  <span>Queue {queue.length} / Active {queueActive ? 1 : 0}</span>
+                  {queue.length > 0 && (
+                    <span className="queue-actions">
+                      {queue.some((i) => i.status === "error") && (
+                        <button type="button" className="queue-action-btn" title="Retry failed" onClick={retryFailedTransfers}>
+                          Retry
+                        </button>
+                      )}
+                      {queue.some((i) => i.status === "done") && (
+                        <button type="button" className="queue-action-btn" title="Clear completed" onClick={clearCompletedTransfers}>
+                          Clear done
+                        </button>
+                      )}
+                      {queue.some((i) => i.status === "queued") && (
+                        <button type="button" className="queue-action-btn" title="Cancel queued" onClick={cancelQueuedTransfers}>
+                          Cancel
+                        </button>
+                      )}
+                      <button type="button" className="queue-action-btn" title="Clear all" onClick={clearAllTransfers}>
+                        Clear all
+                      </button>
+                    </span>
+                  )}
                 </div>
                 <div className="transfer-queue">
                   {queue.length === 0 ? (
@@ -4759,17 +5075,27 @@ export default function App() {
                               );
                             }}
                             onDoubleClick={() =>
-                              entry.is_dir
-                                ? refreshRemote(buildRemotePath(remotePath || "/", entry.name))
-                                : null
+                              openEntry({
+                                scope: "remote",
+                                name: entry.name,
+                                path: buildRemotePath(remotePath || "/", entry.name),
+                                isDir: entry.is_dir,
+                                isImage: isImage,
+                                isVideo: isVideo,
+                              })
                             }
                             role="button"
                             tabIndex={0}
                             onKeyDown={(event) => {
                               if (event.key === "Enter") {
-                                if (entry.is_dir) {
-                                  refreshRemote(buildRemotePath(remotePath || "/", entry.name));
-                                }
+                                openEntry({
+                                  scope: "remote",
+                                  name: entry.name,
+                                  path: buildRemotePath(remotePath || "/", entry.name),
+                                  isDir: entry.is_dir,
+                                  isImage: isImage,
+                                  isVideo: isVideo,
+                                });
                               }
                             }}
                           >
@@ -4929,9 +5255,14 @@ export default function App() {
                             );
                           }}
                           onDoubleClick={() =>
-                            entry.is_dir
-                              ? refreshRemote(buildRemotePath(remotePath || "/", entry.name))
-                              : null
+                            openEntry({
+                              scope: "remote",
+                              name: entry.name,
+                              path: buildRemotePath(remotePath || "/", entry.name),
+                              isDir: entry.is_dir,
+                              isImage: isImage,
+                              isVideo: isVideo,
+                            })
                           }
                           role="button"
                           tabIndex={0}

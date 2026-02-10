@@ -2,6 +2,8 @@
 use std::fs::{self, File};
 use std::io::{Cursor, Read, Write};
 use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -556,6 +558,24 @@ fn copy_remote(
   Ok(())
 }
 
+fn delete_remote_dir(ftp: &mut FtpStream, path: &str) -> Result<(), String> {
+  let listing = ftp.list(Some(path)).map_err(map_err)?;
+  let entries = parse_list_entries(listing);
+  for entry in entries {
+    if entry.name == "." || entry.name == ".." {
+      continue;
+    }
+    let child = join_remote(path, &entry.name);
+    if entry.is_dir {
+      delete_remote_dir(ftp, &child)?;
+    } else {
+      ftp.rm(child).map_err(map_err)?;
+    }
+  }
+  ftp.rmdir(path).map_err(map_err)?;
+  Ok(())
+}
+
 #[tauri::command]
 fn delete_path(
   state: State<'_, AppState>,
@@ -566,7 +586,7 @@ fn delete_path(
   let mut ftp_guard = state.ftp.lock().map_err(map_err)?;
   let ftp = ftp_guard.as_mut().ok_or("Not connected")?;
   if is_dir {
-    ftp.rmdir(path).map_err(map_err)?;
+    delete_remote_dir(ftp, &path)?;
   } else {
     ftp.rm(path).map_err(map_err)?;
   }
@@ -961,10 +981,33 @@ fn launch_path(path: String) -> Result<(), String> {
   if !target.exists() {
     return Err("File not found.".to_string());
   }
-  std::process::Command::new(target)
-    .spawn()
-    .map_err(map_err)?;
-  Ok(())
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("cmd")
+      .args(["/C", "start", "", &path])
+      .creation_flags(0x08000000) // CREATE_NO_WINDOW
+      .spawn()
+      .map_err(map_err)?;
+    return Ok(());
+  }
+  #[cfg(target_os = "macos")]
+  {
+    std::process::Command::new("open")
+      .arg(&path)
+      .spawn()
+      .map_err(map_err)?;
+    return Ok(());
+  }
+  #[cfg(target_os = "linux")]
+  {
+    std::process::Command::new("xdg-open")
+      .arg(&path)
+      .spawn()
+      .map_err(map_err)?;
+    return Ok(());
+  }
+  #[allow(unreachable_code)]
+  Err("Unsupported platform.".to_string())
 }
 
 #[tauri::command]
@@ -1215,6 +1258,74 @@ fn update_preferences(state: State<'_, AppState>, prefs: UiPreferencesInput) -> 
   Ok(())
 }
 
+/* ── Recursive file listing for folder transfers ── */
+
+#[derive(Serialize)]
+struct RecursiveEntry {
+  relative_path: String,
+  is_dir: bool,
+  size: Option<u64>,
+}
+
+#[tauri::command]
+fn list_local_files_recursive(root: String) -> Result<Vec<RecursiveEntry>, String> {
+  let root_path = Path::new(&root);
+  if !root_path.is_dir() {
+    return Err("Path is not a directory".to_string());
+  }
+  let mut results = Vec::new();
+  fn walk(dir: &Path, base: &Path, out: &mut Vec<RecursiveEntry>) -> Result<(), String> {
+    let entries = fs::read_dir(dir).map_err(map_err)?;
+    for entry in entries {
+      let entry = entry.map_err(map_err)?;
+      let path = entry.path();
+      let rel = path.strip_prefix(base).map_err(|e| e.to_string())?.to_string_lossy().replace('\\', "/");
+      let meta = entry.metadata().map_err(map_err)?;
+      if meta.is_dir() {
+        out.push(RecursiveEntry { relative_path: rel.clone(), is_dir: true, size: None });
+        walk(&path, base, out)?;
+      } else {
+        out.push(RecursiveEntry { relative_path: rel, is_dir: false, size: Some(meta.len()) });
+      }
+    }
+    Ok(())
+  }
+  walk(root_path, root_path, &mut results)?;
+  Ok(results)
+}
+
+#[tauri::command]
+fn list_remote_files_recursive(
+  state: State<'_, AppState>,
+  path: String,
+) -> Result<Vec<RecursiveEntry>, String> {
+  let mut ftp_guard = state.ftp.lock().map_err(map_err)?;
+  let ftp = ftp_guard.as_mut().ok_or("Not connected")?;
+  let mut results = Vec::new();
+  fn walk(ftp: &mut FtpStream, dir: &str, base: &str, out: &mut Vec<RecursiveEntry>) -> Result<(), String> {
+    let listing = ftp.list(Some(dir)).map_err(map_err)?;
+    let entries = parse_list_entries(listing);
+    for entry in entries {
+      if entry.name == "." || entry.name == ".." { continue; }
+      let full = join_remote(dir, &entry.name);
+      let rel = if base.ends_with('/') {
+        full.strip_prefix(base).unwrap_or(&full).to_string()
+      } else {
+        full.strip_prefix(&format!("{}/", base)).unwrap_or(&full).to_string()
+      };
+      if entry.is_dir {
+        out.push(RecursiveEntry { relative_path: rel.clone(), is_dir: true, size: None });
+        walk(ftp, &full, base, out)?;
+      } else {
+        out.push(RecursiveEntry { relative_path: rel, is_dir: false, size: Some(entry.size) });
+      }
+    }
+    Ok(())
+  }
+  walk(ftp, &path, &path, &mut results)?;
+  Ok(results)
+}
+
 fn main() {
   let builder = tauri::Builder::default()
     .manage(AppState::default())
@@ -1335,7 +1446,9 @@ fn main() {
       read_local_video_thumb,
       copy_remote,
       create_remote_file,
-      update_preferences
+      update_preferences,
+      list_local_files_recursive,
+      list_remote_files_recursive
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
