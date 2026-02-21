@@ -116,7 +116,7 @@ const RemotePane = ({
       onDragEnter={preventDragDefault}
       onDragOver={preventDragDefault}
       onDragOverCapture={preventDragDefault}
-      onDropCapture={(event) => {
+      onDropCapture={(event: any) => {
         event.preventDefault();
         onDrop(event);
       }}
@@ -144,8 +144,8 @@ const RemotePane = ({
               label="View"
               triggerLabel="View"
               value={remoteViewMode}
-              onChange={(next) => setRemoteViewMode(next as ViewMode)}
-              renderItemIcon={(option) => getViewModeIcon(option.value as ViewMode)}
+              onChange={(next: any) => setRemoteViewMode(next as ViewMode)}
+              renderItemIcon={(option: any) => getViewModeIcon(option.value as ViewMode)}
               renderTriggerIcon={getViewModeIcon(remoteViewMode)}
               sections={[
                 {
@@ -169,8 +169,8 @@ const RemotePane = ({
           <div className="address-input">
             <Input
               value={remoteAddress}
-              onChange={(event) => setRemoteAddress(event.target.value)}
-              onKeyDown={(event) => {
+              onChange={(event: any) => setRemoteAddress(event.target.value)}
+              onKeyDown={(event: any) => {
                 if (event.key === "Enter") onAddressSubmit();
               }}
               disabled={!connected}
@@ -182,7 +182,7 @@ const RemotePane = ({
           <div className="search-row">
             <Input
               value={remoteSearch}
-              onChange={(event) => setRemoteSearch(event.target.value)}
+              onChange={(event: any) => setRemoteSearch(event.target.value)}
               placeholder="Search remote"
               disabled={!connected}
             />
@@ -192,12 +192,12 @@ const RemotePane = ({
 
       <div
         className={`pane-body view-${remoteViewMode}`}
-        onDragOver={(event) => {
+        onDragOver={(event: any) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "copy";
         }}
-        onDrop={onDrop}
-        onContextMenu={(event) => {
+        onDrop={(event: any) => onDrop(event)}
+        onContextMenu={(event: any) => {
           if (
             (event.target as HTMLElement).closest(".entry-card") ||
             (event.target as HTMLElement).closest(".table-row")
@@ -235,9 +235,9 @@ const RemotePane = ({
                     variant="card"
                     borderWidth={1}
                     className={`table-row ${isSelected ? "selected" : ""}`}
-                    onContextMenu={(event) => onContextMenu(event, ctx)}
+                    onContextMenu={(event: any) => onContextMenu(event, ctx)}
                     draggable={!isTauri && !entry.is_dir}
-                    onDragStart={(event) => {
+                    onDragStart={(event: any) => {
                       const payload: DragPayload = {
                         source: "remote",
                         paths: isSelected ? selectedRemote : [entry.name],
@@ -245,18 +245,18 @@ const RemotePane = ({
                       event.dataTransfer.setData("application/json", JSON.stringify(payload));
                       event.dataTransfer.effectAllowed = "copy";
                     }}
-                    onPointerDown={(event) => {
+                    onPointerDown={(event: any) => {
                       if (entry.is_dir) return;
                       onStartSoftDrag(
                         { source: "remote", paths: isSelected ? selectedRemote : [entry.name] },
                         event
                       );
                     }}
-                    onClick={(event) => onSelect(index, entry.name, event)}
+                    onClick={(event: any) => onSelect(index, entry.name, event)}
                     onDoubleClick={() => onOpenEntry(ctx)}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(event) => {
+                    onKeyDown={(event: any) => {
                       if (event.key === "Enter") onOpenEntry(ctx);
                     }}
                   >
@@ -267,13 +267,13 @@ const RemotePane = ({
                       {isRenaming ? (
                         <Input
                           value={renameState?.value ?? ""}
-                          onChange={(event) =>
+                          onChange={(event: any) =>
                             setRenameState((prev) =>
                               prev ? { ...prev, value: event.target.value } : prev
                             )
                           }
                           onKeyDown={onRenameKeyDown}
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event: any) => event.stopPropagation()}
                           onBlur={onCommitRename}
                           autoFocus
                         />
@@ -286,7 +286,7 @@ const RemotePane = ({
                     <span className="row-actions">
                       <Button
                         className="action-icon"
-                        onClick={(event) => {
+                        onClick={(event: any) => {
                           event.stopPropagation();
                           onStartRename(ctx);
                         }}
@@ -296,7 +296,7 @@ const RemotePane = ({
                       </Button>
                       <Button
                         className="action-icon danger"
-                        onClick={(event) => {
+                        onClick={(event: any) => {
                           event.stopPropagation();
                           onDelete({ name: entry.name, path: entry.name, isDir: entry.is_dir });
                         }}
@@ -320,9 +320,9 @@ const RemotePane = ({
               const isSelected = selectedRemote.includes(entry.name);
               const layoutClass =
                 remoteViewMode === "list" ? "list"
-                : remoteViewMode === "content" ? "content"
-                : remoteViewMode === "tiles" ? "tiles"
-                : "grid";
+                  : remoteViewMode === "content" ? "content"
+                    : remoteViewMode === "tiles" ? "tiles"
+                      : "grid";
               const showMeta =
                 remoteViewMode === "list" ||
                 remoteViewMode === "tiles" ||
@@ -343,9 +343,9 @@ const RemotePane = ({
                 <div
                   key={entry.name}
                   className={`entry-card ${layoutClass} ${isSelected ? "selected" : ""}`}
-                  onContextMenu={(event) => onContextMenu(event, ctx)}
+                  onContextMenu={(event: any) => onContextMenu(event, ctx)}
                   draggable={!isTauri && !entry.is_dir}
-                  onDragStart={(event) => {
+                  onDragStart={(event: any) => {
                     const payload: DragPayload = {
                       source: "remote",
                       paths: isSelected ? selectedRemote : [entry.name],
@@ -353,14 +353,14 @@ const RemotePane = ({
                     event.dataTransfer.setData("application/json", JSON.stringify(payload));
                     event.dataTransfer.effectAllowed = "copy";
                   }}
-                  onPointerDown={(event) => {
+                  onPointerDown={(event: any) => {
                     if (entry.is_dir) return;
                     onStartSoftDrag(
                       { source: "remote", paths: isSelected ? selectedRemote : [entry.name] },
                       event
                     );
                   }}
-                  onClick={(event) => onSelect(index, entry.name, event)}
+                  onClick={(event: any) => onSelect(index, entry.name, event)}
                   onDoubleClick={() => onOpenEntry(ctx)}
                   role="button"
                   tabIndex={0}
@@ -374,13 +374,13 @@ const RemotePane = ({
                     {isRenaming ? (
                       <Input
                         value={renameState?.value ?? ""}
-                        onChange={(event) =>
+                        onChange={(event: any) =>
                           setRenameState((prev) =>
                             prev ? { ...prev, value: event.target.value } : prev
                           )
                         }
                         onKeyDown={onRenameKeyDown}
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={(event: any) => event.stopPropagation()}
                         onBlur={onCommitRename}
                         autoFocus
                       />
@@ -392,7 +392,7 @@ const RemotePane = ({
                   <div className="entry-actions">
                     <Button
                       className="action-icon"
-                      onClick={(event) => {
+                      onClick={(event: any) => {
                         event.stopPropagation();
                         onStartRename(ctx);
                       }}
@@ -402,7 +402,7 @@ const RemotePane = ({
                     </Button>
                     <Button
                       className="action-icon danger"
-                      onClick={(event) => {
+                      onClick={(event: any) => {
                         event.stopPropagation();
                         onDelete({ name: entry.name, path: entry.name, isDir: entry.is_dir });
                       }}

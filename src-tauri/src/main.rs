@@ -735,11 +735,18 @@ fn download_file(
   let window_clone = window.clone();
   let id_clone = id.clone();
 
-  match ftp.retr(&remote_path, |reader| {
+  let result = ftp.retr(&remote_path, |reader| {
     let result = copy_with_progress(reader, &mut writer, &window_clone, &id_clone, total);
     writer.flush().map_err(FtpError::ConnectionError)?;
     result
-  }) {
+  });
+
+  // Explicitly extract the inner file, flush, and drop before attempting to rename or delete 
+  // to avoid Windows file lock errors
+  let inner_file_to_drop = writer.into_inner().unwrap_or_else(|e| e.into_inner());
+  drop(inner_file_to_drop);
+
+  match result {
     Ok(_) => {
       fs::rename(&tmp_path, &local_path).map_err(map_err)?;
       emit_done(&window, &id);

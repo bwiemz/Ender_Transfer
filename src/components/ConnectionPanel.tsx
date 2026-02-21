@@ -85,7 +85,7 @@ const ConnectionPanel = ({
               Host
               <Input
                 value={host}
-                onChange={(event) => setHost(event.target.value)}
+                onChange={(event: any) => setHost(event.target.value)}
                 placeholder="ftp.example.com"
               />
             </label>
@@ -94,7 +94,7 @@ const ConnectionPanel = ({
               <Input
                 type="number"
                 value={port}
-                onChange={(event) => setPort(Number(event.target.value))}
+                onChange={(event: any) => setPort(Number(event.target.value))}
               />
             </label>
             <label>
@@ -103,7 +103,7 @@ const ConnectionPanel = ({
                 variant="bookmark"
                 layout="field"
                 value={protocol}
-                onChange={(value) => {
+                onChange={(value: any) => {
                   const next = value as "ftp" | "sftp";
                   if (isTauri && next === "sftp") {
                     addLog("error", "SFTP is available in the web app only.");
@@ -130,7 +130,7 @@ const ConnectionPanel = ({
                 <Input
                   type="number"
                   value={sftpPort}
-                  onChange={(event) => setSftpPort(Number(event.target.value))}
+                  onChange={(event: any) => setSftpPort(Number(event.target.value))}
                 />
               </label>
             ) : null}
@@ -138,7 +138,7 @@ const ConnectionPanel = ({
               Username
               <Input
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={(event: any) => setUsername(event.target.value)}
                 placeholder="anonymous"
               />
             </label>
@@ -147,13 +147,13 @@ const ConnectionPanel = ({
               <Input
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event: any) => setPassword(event.target.value)}
               />
             </label>
             <div className="connection-toggle">
               <Toggle
                 checked={savePassword}
-                onChange={(event) => setSavePassword(event.target.checked)}
+                onChange={(event: any) => setSavePassword(event.target.checked)}
                 label="Save password"
               />
             </div>
@@ -178,11 +178,11 @@ const ConnectionPanel = ({
                       })),
                     },
                   ]}
-                  onChange={(next, option) => onBookmarkSelect(option?.value ?? next)}
+                  onChange={(next: any, option: any) => onBookmarkSelect(option?.value ?? next)}
                   renderTriggerIcon={
                     selectedFtp ? (selectedFtp.password ? <IconUnlock /> : <IconLock />) : <IconLock />
                   }
-                  renderItemIcon={(option) => {
+                  renderItemIcon={(option: any) => {
                     const item = option.meta as FtpBookmark | undefined;
                     return item?.password ? <IconUnlock /> : <IconLock />;
                   }}

@@ -51,7 +51,7 @@ export function useThemePreferences() {
     if (!isTauri) return;
     let active = true;
     readSharedPreferences()
-      .then((prefs) => {
+      .then((prefs: any) => {
         if (!active || !prefs) return;
         const updatedAt = prefs.updatedAt ?? 0;
         sharedThemeUpdatedAtRef.current = updatedAt;
@@ -100,12 +100,10 @@ export function useThemePreferences() {
     applyResolvedTheme();
     if (themeMode !== "system") return;
     const handler = () => applyResolvedTheme();
-    if ("addEventListener" in media) {
+    if (media.addEventListener) {
       media.addEventListener("change", handler);
       return () => media.removeEventListener("change", handler);
     }
-    media.addListener(handler);
-    return () => media.removeListener(handler);
   }, [themeMode]);
 
   // Apply animations attribute
@@ -126,7 +124,7 @@ export function useThemePreferences() {
     }
     if (!sharedThemeAllowed.has(themeMode)) return;
     writeSharedPreferences({ themeMode })
-      .then((prefs) => {
+      .then((prefs: any) => {
         if (prefs?.updatedAt) sharedThemeUpdatedAtRef.current = prefs.updatedAt;
       })
       .catch(() => undefined);
@@ -140,7 +138,7 @@ export function useThemePreferences() {
       return;
     }
     writeSharedPreferences({ animationsEnabled })
-      .then((prefs) => {
+      .then((prefs: any) => {
         if (prefs?.updatedAt) sharedThemeUpdatedAtRef.current = prefs.updatedAt;
       })
       .catch(() => undefined);

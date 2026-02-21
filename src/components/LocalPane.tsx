@@ -14,7 +14,6 @@ import { isTauri, viewModeOptions } from "../constants";
 import {
   formatBytes,
   formatDate,
-  getExtension,
   isImageFile,
   isVideoFile,
   toFileUri,
@@ -27,7 +26,7 @@ import PaneSortMenu from "./PaneSortMenu";
 
 interface LocalPaneProps {
   paneRef: RefObject<HTMLDivElement | null>;
-  fileInputRef: RefObject<HTMLInputElement | null>;
+  fileInputRef: RefObject<HTMLInputElement>;
   softDragTarget: "local" | "remote" | null;
 
   localPath: string;
@@ -43,7 +42,7 @@ interface LocalPaneProps {
   videoThumbCache: Record<string, string>;
   renameState: RenameState | null;
   isPremium: boolean;
-  dragPayloadRef: RefObject<DragPayload | null>;
+  dragPayloadRef: RefObject<DragPayload | null> & { current: DragPayload | null };
 
   setLocalViewMode: (mode: ViewMode) => void;
   setLocalSortBy: (sortBy: SortBy) => void;
@@ -141,11 +140,11 @@ const LocalPane = ({
       onDragEnter={preventDragDefault}
       onDragOver={preventDragDefault}
       onDragOverCapture={preventDragDefault}
-      onDropCapture={(event) => {
+      onDropCapture={(event: any) => {
         event.preventDefault();
         onDrop(event);
       }}
-      onDrop={onDrop}
+      onDrop={(event: any) => onDrop(event)}
     >
       <div className="pane-header explorer-header">
         <div className="pane-title-row">
@@ -182,8 +181,8 @@ const LocalPane = ({
               label="View"
               triggerLabel="View"
               value={localViewMode}
-              onChange={(next) => setLocalViewMode(next as ViewMode)}
-              renderItemIcon={(option) => getViewModeIcon(option.value as ViewMode)}
+              onChange={(next: any) => setLocalViewMode(next as ViewMode)}
+              renderItemIcon={(option: any) => getViewModeIcon(option.value as ViewMode)}
               renderTriggerIcon={getViewModeIcon(localViewMode)}
               sections={[
                 {
@@ -207,8 +206,8 @@ const LocalPane = ({
           <div className="address-input">
             <Input
               value={localAddress}
-              onChange={(event) => setLocalAddress(event.target.value)}
-              onKeyDown={(event) => {
+              onChange={(event: any) => setLocalAddress(event.target.value)}
+              onKeyDown={(event: any) => {
                 if (event.key === "Enter") onAddressSubmit();
               }}
               disabled={!isTauri}
@@ -220,7 +219,7 @@ const LocalPane = ({
           <div className="search-row">
             <Input
               value={localSearch}
-              onChange={(event) => setLocalSearch(event.target.value)}
+              onChange={(event: any) => setLocalSearch(event.target.value)}
               placeholder="Search local"
             />
           </div>
@@ -238,12 +237,12 @@ const LocalPane = ({
 
       <div
         className={`pane-body view-${localViewMode}`}
-        onDragOver={(event) => {
+        onDragOver={(event: any) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = "copy";
         }}
-        onDrop={onDrop}
-        onContextMenu={(event) => {
+        onDrop={(event: any) => onDrop(event)}
+        onContextMenu={(event: any) => {
           if (
             (event.target as HTMLElement).closest(".entry-card") ||
             (event.target as HTMLElement).closest(".table-row")
@@ -278,9 +277,9 @@ const LocalPane = ({
                     variant="card"
                     borderWidth={1}
                     className={`table-row ${isSelected ? "selected" : ""}`}
-                    onContextMenu={(event) => onContextMenu(event, ctx)}
+                    onContextMenu={(event: any) => onContextMenu(event, ctx)}
                     draggable={!isTauri}
-                    onDragStart={(event) => {
+                    onDragStart={(event: any) => {
                       const payload: DragPayload = {
                         source: "local",
                         paths: isSelected ? selectedLocal : [entry.path],
@@ -300,18 +299,18 @@ const LocalPane = ({
                       event.dataTransfer.effectAllowed = "copy";
                       event.dataTransfer.dropEffect = "copy";
                     }}
-                    onPointerDown={(event) => {
+                    onPointerDown={(event: any) => {
                       onStartSoftDrag(
                         { source: "local", paths: isSelected ? selectedLocal : [entry.path] },
                         event
                       );
                     }}
                     onDragEnd={() => { dragPayloadRef.current = null; }}
-                    onClick={(event) => onSelect(index, entry.path, event)}
+                    onClick={(event: any) => onSelect(index, entry.path, event)}
                     onDoubleClick={() => onOpenEntry(ctx)}
                     role="button"
                     tabIndex={0}
-                    onKeyDown={(event) => {
+                    onKeyDown={(event: any) => {
                       if (event.key === "Enter") onOpenEntry(ctx);
                     }}
                   >
@@ -322,13 +321,13 @@ const LocalPane = ({
                       {isRenaming ? (
                         <Input
                           value={renameState?.value ?? ""}
-                          onChange={(event) =>
+                          onChange={(event: any) =>
                             setRenameState((prev) =>
                               prev ? { ...prev, value: event.target.value } : prev
                             )
                           }
                           onKeyDown={onRenameKeyDown}
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event: any) => event.stopPropagation()}
                           onBlur={onCommitRename}
                           autoFocus
                         />
@@ -342,7 +341,7 @@ const LocalPane = ({
                       {entry.is_dir ? (
                         <Button
                           className={`pin-btn ${isPinned ? "pinned" : ""}`}
-                          onClick={(event) => {
+                          onClick={(event: any) => {
                             event.stopPropagation();
                             if (!isPremium && !isPinned) {
                               addLog("info", "Premium required to save bookmarks.");
@@ -362,7 +361,7 @@ const LocalPane = ({
                       ) : null}
                       <Button
                         className="action-icon"
-                        onClick={(event) => {
+                        onClick={(event: any) => {
                           event.stopPropagation();
                           onStartRename(ctx);
                         }}
@@ -373,7 +372,7 @@ const LocalPane = ({
                       </Button>
                       <Button
                         className="action-icon danger"
-                        onClick={(event) => {
+                        onClick={(event: any) => {
                           event.stopPropagation();
                           onDelete({ name: entry.name, path: entry.path, isDir: entry.is_dir });
                         }}
@@ -396,9 +395,9 @@ const LocalPane = ({
               const isSelected = selectedLocal.includes(entry.path);
               const layoutClass =
                 localViewMode === "list" ? "list"
-                : localViewMode === "content" ? "content"
-                : localViewMode === "tiles" ? "tiles"
-                : "grid";
+                  : localViewMode === "content" ? "content"
+                    : localViewMode === "tiles" ? "tiles"
+                      : "grid";
               const showMeta =
                 localViewMode === "list" ||
                 localViewMode === "tiles" ||
@@ -428,9 +427,9 @@ const LocalPane = ({
                 <div
                   key={entry.path}
                   className={`entry-card ${layoutClass} ${isSelected ? "selected" : ""}`}
-                  onContextMenu={(event) => onContextMenu(event, ctx)}
+                  onContextMenu={(event: any) => onContextMenu(event, ctx)}
                   draggable={!isTauri}
-                  onDragStart={(event) => {
+                  onDragStart={(event: any) => {
                     const payload: DragPayload = {
                       source: "local",
                       paths: isSelected ? selectedLocal : [entry.path],
@@ -450,7 +449,7 @@ const LocalPane = ({
                     event.dataTransfer.effectAllowed = "copy";
                     event.dataTransfer.dropEffect = "copy";
                   }}
-                  onPointerDown={(event) => {
+                  onPointerDown={(event: any) => {
                     onStartSoftDrag(
                       { source: "local", paths: isSelected ? selectedLocal : [entry.path] },
                       event
@@ -480,13 +479,13 @@ const LocalPane = ({
                     {isRenaming ? (
                       <Input
                         value={renameState?.value ?? ""}
-                        onChange={(event) =>
+                        onChange={(event: any) =>
                           setRenameState((prev) =>
                             prev ? { ...prev, value: event.target.value } : prev
                           )
                         }
                         onKeyDown={onRenameKeyDown}
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={(event: any) => event.stopPropagation()}
                         onBlur={onCommitRename}
                         autoFocus
                       />
@@ -499,7 +498,7 @@ const LocalPane = ({
                     {entry.is_dir ? (
                       <Button
                         className={`pin-btn ${isPinned ? "pinned" : ""}`}
-                        onClick={(event) => {
+                        onClick={(event: any) => {
                           event.stopPropagation();
                           if (!isPremium && !isPinned) {
                             addLog("info", "Premium required to save bookmarks.");
@@ -519,7 +518,7 @@ const LocalPane = ({
                     ) : null}
                     <Button
                       className="action-icon"
-                      onClick={(event) => {
+                      onClick={(event: any) => {
                         event.stopPropagation();
                         onStartRename(ctx);
                       }}
@@ -530,7 +529,7 @@ const LocalPane = ({
                     </Button>
                     <Button
                       className="action-icon danger"
-                      onClick={(event) => {
+                      onClick={(event: any) => {
                         event.stopPropagation();
                         onDelete({ name: entry.name, path: entry.path, isDir: entry.is_dir });
                       }}

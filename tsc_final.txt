@@ -1,0 +1,9 @@
+src/App.tsx(148,5): error TS6133: 'entitlementStatus' is declared but its value is never read.
+src/components/ContextMenu.tsx(1,10): error TS6133: 'Button' is declared but its value is never read.
+src/components/ContextMenu.tsx(15,51): error TS6196: 'ClipboardState' is declared but never used.
+src/components/ContextMenu.tsx(18,41): error TS6133: 'IconChevronDown' is declared but its value is never read.
+src/components/ContextMenu.tsx(98,3): error TS6133: 'isPremium' is declared but its value is never read.
+src/components/ContextMenu.tsx(100,3): error TS6133: 'localPath' is declared but its value is never read.
+src/components/ContextMenu.tsx(101,3): error TS6133: 'isTauri' is declared but its value is never read.
+src/components/ContextMenu.tsx(102,3): error TS6133: 'addLog' is declared but its value is never read.
+src/components/LocalPane.tsx(17,3): error TS6133: 'getExtension' is declared but its value is never read.

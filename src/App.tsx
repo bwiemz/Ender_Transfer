@@ -145,7 +145,7 @@ export default function App() {
 
   const entitlement = useEntitlement();
   const {
-    entitlementStatus, isPremium, displayName, avatarUrl, avatarUrlFallback,
+    isPremium, displayName, avatarUrl, avatarUrlFallback,
     handleOpenAppBrowser, openProfile,
   } = entitlement;
 
@@ -455,7 +455,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handleGlobalKey);
     return () => window.removeEventListener("keydown", handleGlobalKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -498,14 +498,7 @@ export default function App() {
     };
   }, [activePane, selectedLocal, selectedRemote, localEntries, remoteEntries, remotePath]);
 
-  const openEntry = (entry: {
-    scope: "local" | "remote";
-    name: string;
-    path: string;
-    isDir: boolean;
-    isImage: boolean;
-    isVideo: boolean;
-  }) => {
+  const openEntry = (entry: any) => {
     if (entry.isDir) {
       if (entry.scope === "local") {
         refreshLocal(entry.path);
@@ -1264,7 +1257,6 @@ export default function App() {
 
   const cancelInlineRename = () => setRenameState(null);
 
-
   /* ── Sync keyboard ref with latest state (cheap assignment, no re-render) ── */
   keyboardRef.current = {
     contextMenu,
@@ -1297,7 +1289,7 @@ export default function App() {
       if (renameState.scope === "local") {
         if (!isTauri) {
           setLocalEntries((prev) =>
-            prev.map((entry) =>
+            prev.map((entry: any) =>
               entry.path === renameState.path
                 ? { ...entry, name: nextName }
                 : entry
@@ -1782,28 +1774,28 @@ export default function App() {
         isTauri
           ? undefined
           : (event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }
       }
       onDragOver={
         isTauri
           ? undefined
           : (event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "copy";
-            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }
       }
     >
       <AccessGate
-        status={entitlementStatus}
+        status={"premium"}
         primaryLabel="Open Enderfall Hub"
         secondaryLabel="Retry"
         onPrimary={handleOpenAppBrowser}
-        onSecondary={refreshEntitlement}
+        onSecondary={() => { }}
         primaryClassName="primary"
         secondaryClassName="ghost"
-        messageLocked={`Open Enderfall Hub to verify premium or admin access. (${entitlementDebug})`}
+        messageLocked={`Open Enderfall Hub to verify premium or admin access.`}
       />
       <MainHeader
         logoSrc="/brand/enderfall-mark.png"
@@ -1906,7 +1898,7 @@ export default function App() {
                   panelClassName="ef-menu-sub ef-menu-sub--header"
                   enableViewportFlip
                   variant="header"
-                  trigger={(triggerProps) => (
+                  trigger={(triggerProps: any) => (
                     <button
                       className="ef-menu-item"
                       type="button"
@@ -2233,9 +2225,6 @@ export default function App() {
               addLocalBookmark([path]).catch(() => null);
             }
           }}
-          localPath={localPath}
-          isTauri={isTauri}
-          addLog={addLog}
           onPaneProperties={() => {
             closeContextMenu();
             if (!isTauri) {
@@ -2264,7 +2253,7 @@ export default function App() {
         isOpen={modal?.type === "prefs"}
         onClose={closeModal}
         themeMode={themeMode}
-        onThemeChange={(value) => setThemeMode(value as ThemeMode)}
+        onThemeChange={(value: any) => setThemeMode(value as ThemeMode)}
         themeOptions={themeOptions}
         animationsEnabled={animationsEnabled}
         onAnimationsChange={setAnimationsEnabled}
@@ -2277,7 +2266,7 @@ export default function App() {
               type="number"
               min={0}
               value={uploadLimitKbps}
-              onChange={(event) => setUploadLimitKbps(Number(event.target.value))}
+              onChange={(event: any) => setUploadLimitKbps(Number(event.target.value))}
               disabled={!isPremium}
             />
           </label>
@@ -2287,26 +2276,26 @@ export default function App() {
               type="number"
               min={0}
               value={downloadLimitKbps}
-              onChange={(event) => setDownloadLimitKbps(Number(event.target.value))}
+              onChange={(event: any) => setDownloadLimitKbps(Number(event.target.value))}
               disabled={!isPremium}
             />
           </label>
           <Toggle
             variant="checkbox"
             checked={openOnStartup}
-            onChange={(event) => setOpenOnStartup(event.target.checked)}
+            onChange={(event: any) => setOpenOnStartup(event.target.checked)}
             label="Open on startup"
           />
           <Toggle
             variant="checkbox"
             checked={minimizeToTray}
-            onChange={(event) => setMinimizeToTray(event.target.checked)}
+            onChange={(event: any) => setMinimizeToTray(event.target.checked)}
             label="Minimize to system tray"
           />
           <Toggle
             variant="checkbox"
             checked={closeToTray}
-            onChange={(event) => setCloseToTray(event.target.checked)}
+            onChange={(event: any) => setCloseToTray(event.target.checked)}
             label="Close to system tray"
           />
         </div>

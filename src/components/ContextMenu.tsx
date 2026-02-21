@@ -1,4 +1,4 @@
-import { Button, Modal, SideMenu, SideMenuSubmenu } from "@enderfall/ui";
+import { Modal, SideMenu, SideMenuSubmenu } from "@enderfall/ui";
 import {
   FiChevronRight,
   FiCornerUpLeft,
@@ -12,10 +12,10 @@ import {
   FiPlus,
   FiScissors,
 } from "react-icons/fi";
-import type { ContextMenuEntry, ContextMenuState, ClipboardState, SortBy, SortOrder, ViewMode } from "../types";
+import type { ContextMenuEntry, ContextMenuState, SortBy, SortOrder, ViewMode } from "../types";
 import { viewModeOptions, sortPrimaryOptions, sortMoreOptions, sortOrderOptions } from "../constants";
 import { handleEllipsisTooltip, clearEllipsisTooltip } from "../utils";
-import { IconEdit, IconTrash, IconStar, IconChevronDown, getEntryTypeIcon, getViewModeIcon, getSortByIcon, getSortOrderIcon } from "../icons";
+import { IconEdit, IconTrash, IconStar, getEntryTypeIcon, getViewModeIcon, getSortByIcon, getSortOrderIcon } from "../icons";
 
 interface ContextMenuProps {
   contextMenu: ContextMenuState;
@@ -56,10 +56,6 @@ interface ContextMenuProps {
   localBookmarks: { path: string }[];
   isPremium: boolean;
   onToggleBookmark: (path: string) => void;
-  // Properties pane-level
-  localPath: string;
-  isTauri: boolean;
-  addLog: (level: string, message: string) => void;
   onPaneProperties: () => void;
 }
 
@@ -95,11 +91,7 @@ const ContextMenuComponent = ({
   contextCanPaste,
   contextDisableLocalActions,
   localBookmarks,
-  isPremium,
   onToggleBookmark,
-  localPath,
-  isTauri,
-  addLog,
   onPaneProperties,
 }: ContextMenuProps) => (
   <Modal isOpen={true} onClose={onClose} title="" className="context-menu">
@@ -111,7 +103,7 @@ const ContextMenuComponent = ({
             className="context-menu-submenu"
             panelClassName="context-menu-submenu-panel"
             enableViewportFlip
-            trigger={(triggerProps) => (
+            trigger={(triggerProps: any) => (
               <button
                 className="context-menu-item is-submenu"
                 type="button"
@@ -155,7 +147,7 @@ const ContextMenuComponent = ({
             panelClassName="context-menu-submenu-panel"
             enableViewportFlip
             onOpenChange={onContextPaneSortOpenChange}
-            trigger={(triggerProps) => (
+            trigger={(triggerProps: any) => (
               <button
                 className="context-menu-item is-submenu"
                 type="button"
@@ -190,7 +182,7 @@ const ContextMenuComponent = ({
                 className="context-menu-submenu"
                 panelClassName="context-menu-submenu-panel"
                 enableViewportFlip
-                trigger={(triggerProps) => (
+                trigger={(triggerProps: any) => (
                   <button
                     className="context-menu-item is-submenu"
                     type="button"
@@ -224,7 +216,7 @@ const ContextMenuComponent = ({
                 className="context-menu-submenu"
                 panelClassName="context-menu-submenu-panel"
                 enableViewportFlip
-                trigger={(triggerProps) => (
+                trigger={(triggerProps: any) => (
                   <button
                     className="context-menu-item is-submenu"
                     type="button"
@@ -282,7 +274,7 @@ const ContextMenuComponent = ({
             panelClassName="context-menu-submenu-panel"
             enableViewportFlip
             disabled={!contextCanCreate}
-            trigger={(triggerProps) => (
+            trigger={(triggerProps: any) => (
               <button
                 className="context-menu-item is-submenu"
                 type="button"
@@ -388,10 +380,10 @@ const ContextMenuComponent = ({
             <span className="context-menu-icon">
               {contextEntry
                 ? getEntryTypeIcon({
-                    isDir: contextEntry.isDir,
-                    isImage: contextEntry.isImage,
-                    isVideo: contextEntry.isVideo,
-                  })
+                  isDir: contextEntry.isDir,
+                  isImage: contextEntry.isImage,
+                  isVideo: contextEntry.isVideo,
+                })
                 : null}
             </span>
             <span className="context-menu-label" onMouseEnter={handleEllipsisTooltip} onMouseLeave={clearEllipsisTooltip}>Open</span>
@@ -403,7 +395,7 @@ const ContextMenuComponent = ({
             panelClassName="context-menu-submenu-panel"
             enableViewportFlip
             disabled={contextEntry?.isDir || contextEntry?.scope !== "local"}
-            trigger={(triggerProps) => (
+            trigger={(triggerProps: any) => (
               <button
                 className="context-menu-item is-submenu"
                 type="button"

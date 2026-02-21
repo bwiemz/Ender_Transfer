@@ -26,7 +26,7 @@ const AppModals = ({ modal, modalValue, onModalValueChange, onClose, onConfirm }
         <Input
           autoFocus
           value={modalValue}
-          onChange={(event) => onModalValueChange(event.target.value)}
+          onChange={(event: any) => onModalValueChange(event.target.value)}
           placeholder="Enter a name"
         />
       )}

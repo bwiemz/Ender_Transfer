@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git pull:*)",
+      "Bash(cargo check:*)",
+      "Bash(cmd.exe /c \"where cargo\")",
+      "Bash(cmd.exe /c \"where rustc\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npx pnpm install:*)",
+      "Bash(gh api:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "mcp__plugin_serena_serena__activate_project",
+      "Bash(wc:*)",
+      "mcp__plugin_serena_serena__list_memories",
+      "Bash(xxd:*)",
+      "Bash(python3:*)",
+      "Bash(py:*)",
+      "Bash(node --version:*)",
+      "Bash(python:*)",
+      "Bash(printf:*)",
+      "Bash(/c/Users/bwiem/AppData/Local/Programs/Python/Python314/python.exe -c:*)",
+      "Bash(where:*)",
+      "Bash(/c/Users/bwiem/AppData/Local/Microsoft/WindowsApps/python --version)",
+      "Bash(/c/Users/bwiem/AppData/Local/Programs/Python/Python314/python.exe:*)",
+      "Bash(/tmp/replace_app_tsx.py:*)",
+      "Bash(node -e \":*)",
+      "Bash(node:*)"
+    ]
+  }
+}

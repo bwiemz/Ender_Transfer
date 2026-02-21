@@ -56,26 +56,26 @@ const PaneSortMenu = ({
             </button>
           ))}
           <div className="context-menu-separator" role="separator" />
-        <SideMenuSubmenu
-          id="pane-sort-more"
-          className="bookmark-submenu"
-          panelClassName="bookmark-submenu-panel"
-          enableViewportFlip
-          trigger={(triggerProps) => (
-            <button
-              className="bookmark-item is-submenu"
-              type="button"
-              onClick={triggerProps.onClick}
-              aria-expanded={triggerProps["aria-expanded"]}
-              disabled={triggerProps.disabled}
-            >
-              <span className="bookmark-text">More</span>
-              <span className="bookmark-caret">
-                <FiChevronRight />
-              </span>
-            </button>
-          )}
-        >
+          <SideMenuSubmenu
+            id="pane-sort-more"
+            className="bookmark-submenu"
+            panelClassName="bookmark-submenu-panel"
+            enableViewportFlip
+            trigger={(triggerProps: any) => (
+              <button
+                className="bookmark-item is-submenu"
+                type="button"
+                onClick={triggerProps.onClick}
+                aria-expanded={triggerProps["aria-expanded"]}
+                disabled={triggerProps.disabled}
+              >
+                <span className="bookmark-text">More</span>
+                <span className="bookmark-caret">
+                  <FiChevronRight />
+                </span>
+              </button>
+            )}
+          >
             {sortMoreOptions.map((item) => (
               <button
                 key={item.value}
@@ -91,26 +91,26 @@ const PaneSortMenu = ({
               </button>
             ))}
           </SideMenuSubmenu>
-        <SideMenuSubmenu
-          id="pane-sort-order"
-          className="bookmark-submenu"
-          panelClassName="bookmark-submenu-panel"
-          enableViewportFlip
-          trigger={(triggerProps) => (
-            <button
-              className="bookmark-item is-submenu"
-              type="button"
-              onClick={triggerProps.onClick}
-              aria-expanded={triggerProps["aria-expanded"]}
-              disabled={triggerProps.disabled}
-            >
-              <span className="bookmark-text">Order</span>
-              <span className="bookmark-caret">
-                <FiChevronRight />
-              </span>
-            </button>
-          )}
-        >
+          <SideMenuSubmenu
+            id="pane-sort-order"
+            className="bookmark-submenu"
+            panelClassName="bookmark-submenu-panel"
+            enableViewportFlip
+            trigger={(triggerProps: any) => (
+              <button
+                className="bookmark-item is-submenu"
+                type="button"
+                onClick={triggerProps.onClick}
+                aria-expanded={triggerProps["aria-expanded"]}
+                disabled={triggerProps.disabled}
+              >
+                <span className="bookmark-text">Order</span>
+                <span className="bookmark-caret">
+                  <FiChevronRight />
+                </span>
+              </button>
+            )}
+          >
             {sortOrderOptions.map((item) => (
               <button
                 key={item.value}
